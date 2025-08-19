@@ -1,0 +1,205 @@
+[gd_scene load_steps=53 format=3 uid="uid://d2tu1dcn2h8mw"]
+
+[ext_resource type="Texture2D" uid="uid://b35c6bsenv4wj" path="res://Art/Deep Salt Water.png" id="1_77y11"]
+[ext_resource type="Texture2D" uid="uid://2dodpkvnm7eb" path="res://Art/Shallow Salt Water.png" id="2_kt4cs"]
+[ext_resource type="Texture2D" uid="uid://cudunmdfwhila" path="res://Art/Sand.png" id="3_m7qxo"]
+[ext_resource type="Texture2D" uid="uid://bjx5kf6htmf7a" path="res://Art/grass.png" id="4_5trjc"]
+[ext_resource type="Texture2D" uid="uid://hjq5lak11oq6" path="res://Art/Tall Grass.png" id="5_f1afx"]
+[ext_resource type="Texture2D" uid="uid://du4qtpens0hb1" path="res://Art/Dirt.png" id="6_3513a"]
+[ext_resource type="Texture2D" uid="uid://coc3qdxl53x30" path="res://Art/River1.png" id="7_o2ct2"]
+[ext_resource type="Texture2D" uid="uid://dahcethmk06k0" path="res://Art/Stone.png" id="7_wkspg"]
+[ext_resource type="Texture2D" uid="uid://bv6rqy2en03sn" path="res://Art/Shallow Fresh Water.png" id="8_5e808"]
+[ext_resource type="Texture2D" uid="uid://cnmchqt0rcawg" path="res://Art/River2.png" id="8_kpdco"]
+[ext_resource type="Texture2D" uid="uid://ba4tmw3ugkhuk" path="res://Art/Dirtcliff1.png" id="9_elweb"]
+[ext_resource type="Texture2D" uid="uid://p7vttxqkrxk4" path="res://Art/grasscliff1.png" id="9_f1afx"]
+[ext_resource type="Texture2D" uid="uid://clvvsh3k0n5yn" path="res://Art/River3.png" id="9_pmoc4"]
+[ext_resource type="Texture2D" uid="uid://csjqx8tl3nuil" path="res://Art/Deep Fresh Water.png" id="9_rkqni"]
+[ext_resource type="Texture2D" uid="uid://u3g8rneksyqh" path="res://Art/grasscliff2.png" id="10_3513a"]
+[ext_resource type="Texture2D" uid="uid://b860ow4p3onnw" path="res://Art/River.png" id="10_ea8lo"]
+[ext_resource type="Texture2D" uid="uid://gwp5wyq357el" path="res://Art/River mouth.png" id="11_feejt"]
+[ext_resource type="Texture2D" uid="uid://bg645kvwa7cgr" path="res://Art/grasscliff3.png" id="11_wkspg"]
+[ext_resource type="Script" uid="uid://cwwcjimfpkytt" path="res://tile_map_layer.gd" id="12_elweb"]
+[ext_resource type="Texture2D" uid="uid://cuqkqbksr4ck3" path="res://Art/Dirtcliff2.png" id="13_3170w"]
+[ext_resource type="Script" uid="uid://bp0vl50sbjq0l" path="res://camera_2d.gd" id="13_kt4cs"]
+[ext_resource type="Texture2D" uid="uid://rae4nelcuhq3" path="res://Art/cliff 0-1.png" id="15_rkqni"]
+[ext_resource type="Texture2D" uid="uid://dumfj68yh5xs8" path="res://Art/cliff 1-2.png" id="16_ea8lo"]
+[ext_resource type="Texture2D" uid="uid://cby0ykwg0qhb8" path="res://Art/Dirtlevel3.png" id="16_lbrff"]
+[ext_resource type="Texture2D" uid="uid://ck665sljefp84" path="res://Art/cliff 2-3.png" id="17_feejt"]
+[ext_resource type="Script" uid="uid://bqryjfpvs7t78" path="res://3d_renderer.gd" id="25_o2ct2"]
+[ext_resource type="Script" uid="uid://dtcioognb2h8l" path="res://camera_controller.gd" id="26_kpdco"]
+[ext_resource type="Script" uid="uid://dwxqg2p1f6hb" path="res://view_manager.gd" id="29_df4ci"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_3170w"]
+resource_name = "Deep Water"
+texture = ExtResource("1_77y11")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lbrff"]
+resource_name = "Shallow Salt Water"
+texture = ExtResource("2_kt4cs")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_kpdco"]
+resource_name = "lvl 0 Grass"
+texture = ExtResource("4_5trjc")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_df4ci"]
+resource_name = "Lvel 0 Dirt"
+texture = ExtResource("6_3513a")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_o2ct2"]
+resource_name = "Beach"
+texture = ExtResource("3_m7qxo")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_pa2vb"]
+resource_name = "level 0 Stone"
+texture = ExtResource("7_wkspg")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_7yny0"]
+texture = ExtResource("7_o2ct2")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_8ov6w"]
+texture = ExtResource("8_kpdco")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_fdoer"]
+texture = ExtResource("9_pmoc4")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_cr0o7"]
+resource_name = "Shallow Fresh Water"
+texture = ExtResource("8_5e808")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_kt4cs"]
+resource_name = "level 1 grass"
+texture = ExtResource("9_f1afx")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_f1afx"]
+resource_name = "level 1 Dirt"
+texture = ExtResource("9_elweb")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_u2mtd"]
+resource_name = "Deep Fresh Water"
+texture = ExtResource("9_rkqni")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_m7qxo"]
+resource_name = "level 2 grass"
+texture = ExtResource("10_3513a")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_pmoc4"]
+resource_name = "tall grass"
+texture = ExtResource("5_f1afx")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_3513a"]
+resource_name = "level 2 dirt"
+texture = ExtResource("13_3170w")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ldqjh"]
+resource_name = "River"
+texture = ExtResource("10_ea8lo")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5trjc"]
+resource_name = "level 3 grass"
+texture = ExtResource("11_wkspg")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_wkspg"]
+resource_name = "level 3 dirt"
+texture = ExtResource("16_lbrff")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_b8vc1"]
+resource_name = "River Mouth"
+texture = ExtResource("11_feejt")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_elweb"]
+texture = ExtResource("15_rkqni")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_10ugp"]
+texture = ExtResource("16_ea8lo")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_awtr3"]
+texture = ExtResource("17_feejt")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_10ugp"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_3170w")
+sources/1 = SubResource("TileSetAtlasSource_lbrff")
+sources/2 = SubResource("TileSetAtlasSource_cr0o7")
+sources/3 = SubResource("TileSetAtlasSource_u2mtd")
+sources/4 = SubResource("TileSetAtlasSource_ldqjh")
+sources/5 = SubResource("TileSetAtlasSource_b8vc1")
+sources/20 = SubResource("TileSetAtlasSource_kt4cs")
+sources/12 = SubResource("TileSetAtlasSource_o2ct2")
+sources/10 = SubResource("TileSetAtlasSource_kpdco")
+sources/11 = SubResource("TileSetAtlasSource_df4ci")
+sources/13 = SubResource("TileSetAtlasSource_pa2vb")
+sources/21 = SubResource("TileSetAtlasSource_f1afx")
+sources/41 = SubResource("TileSetAtlasSource_wkspg")
+sources/40 = SubResource("TileSetAtlasSource_5trjc")
+sources/31 = SubResource("TileSetAtlasSource_3513a")
+sources/50 = SubResource("TileSetAtlasSource_elweb")
+sources/51 = SubResource("TileSetAtlasSource_10ugp")
+sources/52 = SubResource("TileSetAtlasSource_awtr3")
+sources/302 = SubResource("TileSetAtlasSource_pmoc4")
+sources/30 = SubResource("TileSetAtlasSource_m7qxo")
+sources/14 = SubResource("TileSetAtlasSource_7yny0")
+sources/15 = SubResource("TileSetAtlasSource_8ov6w")
+sources/16 = SubResource("TileSetAtlasSource_fdoer")
+
+[node name="Gameworld" type="Node3D"]
+script = ExtResource("29_df4ci")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="."]
+tile_set = SubResource("TileSet_10ugp")
+script = ExtResource("12_elweb")
+
+[node name="3D Renderer" type="Node3D" parent="."]
+script = ExtResource("25_o2ct2")
+water_level_offset = -0.2
+
+[node name="Camera Controller" type="Node3D" parent="."]
+script = ExtResource("26_kpdco")
+
+[node name="Camera2D" type="Camera2D" parent="Camera Controller"]
+script = ExtResource("13_kt4cs")

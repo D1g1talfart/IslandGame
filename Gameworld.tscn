@@ -1,0 +1,226 @@
+[gd_scene load_steps=45 format=3 uid="uid://y12d1dx0txhh"]
+
+[ext_resource type="Script" uid="uid://dwxqg2p1f6hb" path="res://view_manager.gd" id="1_pd1xp"]
+[ext_resource type="Texture2D" uid="uid://b35c6bsenv4wj" path="res://Art/Deep Salt Water.png" id="5_81k2m"]
+[ext_resource type="Script" uid="uid://dafgex1lfok0e" path="res://2D_Render.gd" id="5_ets4q"]
+[ext_resource type="Texture2D" uid="uid://2dodpkvnm7eb" path="res://Art/Shallow Salt Water.png" id="6_1yesx"]
+[ext_resource type="Texture2D" uid="uid://bjx5kf6htmf7a" path="res://Art/grass.png" id="7_2dx10"]
+[ext_resource type="Texture2D" uid="uid://du4qtpens0hb1" path="res://Art/Dirt.png" id="8_x8wmw"]
+[ext_resource type="Texture2D" uid="uid://cudunmdfwhila" path="res://Art/Sand.png" id="9_tadj4"]
+[ext_resource type="Texture2D" uid="uid://coc3qdxl53x30" path="res://Art/River1.png" id="10_pd1xp"]
+[ext_resource type="Texture2D" uid="uid://cnmchqt0rcawg" path="res://Art/River2.png" id="11_jp1fx"]
+[ext_resource type="Texture2D" uid="uid://clvvsh3k0n5yn" path="res://Art/River3.png" id="12_tyf4s"]
+[ext_resource type="Texture2D" uid="uid://bv6rqy2en03sn" path="res://Art/Shallow Fresh Water.png" id="13_rk28s"]
+[ext_resource type="Texture2D" uid="uid://p7vttxqkrxk4" path="res://Art/grasscliff1.png" id="14_eil4d"]
+[ext_resource type="Texture2D" uid="uid://ba4tmw3ugkhuk" path="res://Art/Dirtcliff1.png" id="15_ay7rc"]
+[ext_resource type="Texture2D" uid="uid://csjqx8tl3nuil" path="res://Art/Deep Fresh Water.png" id="16_v186p"]
+[ext_resource type="Texture2D" uid="uid://u3g8rneksyqh" path="res://Art/grasscliff2.png" id="17_kneq6"]
+[ext_resource type="Texture2D" uid="uid://cuqkqbksr4ck3" path="res://Art/Dirtcliff2.png" id="18_tndrn"]
+[ext_resource type="Texture2D" uid="uid://b860ow4p3onnw" path="res://Art/River.png" id="19_26o6d"]
+[ext_resource type="Texture2D" uid="uid://bg645kvwa7cgr" path="res://Art/grasscliff3.png" id="20_fiwh8"]
+[ext_resource type="Texture2D" uid="uid://cby0ykwg0qhb8" path="res://Art/Dirtlevel3.png" id="21_k6bkw"]
+[ext_resource type="Texture2D" uid="uid://gwp5wyq357el" path="res://Art/River mouth.png" id="22_c66x4"]
+[ext_resource type="Script" uid="uid://bm5um3pdvind8" path="res://terrain_manager.gd" id="24_1yesx"]
+[ext_resource type="Script" uid="uid://bmkylu3p8sagm" path="res://resource_spawner.gd" id="25_2dx10"]
+[ext_resource type="Script" uid="uid://bqryjfpvs7t78" path="res://3d_renderer.gd" id="26_f6w76"]
+[ext_resource type="Script" uid="uid://dtcioognb2h8l" path="res://camera_controller.gd" id="27_2xuep"]
+[ext_resource type="Script" uid="uid://bp0vl50sbjq0l" path="res://camera_2d.gd" id="28_h2wsm"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_6qhjg"]
+resource_name = "Ocean"
+texture = ExtResource("5_81k2m")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_oqk5c"]
+texture = ExtResource("6_1yesx")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q4ofp"]
+texture = ExtResource("7_2dx10")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_7a65t"]
+texture = ExtResource("8_x8wmw")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_aykxq"]
+texture = ExtResource("9_tadj4")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_m1ngu"]
+texture = ExtResource("10_pd1xp")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_c4580"]
+texture = ExtResource("11_jp1fx")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_opjwg"]
+texture = ExtResource("12_tyf4s")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_1oyvb"]
+texture = ExtResource("13_rk28s")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mm8mf"]
+texture = ExtResource("14_eil4d")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_kssra"]
+texture = ExtResource("15_ay7rc")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_6qklj"]
+texture = ExtResource("16_v186p")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_f6w76"]
+texture = ExtResource("17_kneq6")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2xuep"]
+texture = ExtResource("18_tndrn")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_h2wsm"]
+texture = ExtResource("19_26o6d")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ws3o1"]
+texture = ExtResource("20_fiwh8")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_e4j4n"]
+texture = ExtResource("21_k6bkw")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_v32kp"]
+texture = ExtResource("22_c66x4")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_yqelb"]
+tile_size = Vector2i(32, 32)
+sources/3 = SubResource("TileSetAtlasSource_6qklj")
+sources/0 = SubResource("TileSetAtlasSource_6qhjg")
+sources/1 = SubResource("TileSetAtlasSource_oqk5c")
+sources/2 = SubResource("TileSetAtlasSource_1oyvb")
+sources/4 = SubResource("TileSetAtlasSource_h2wsm")
+sources/5 = SubResource("TileSetAtlasSource_v32kp")
+sources/10 = SubResource("TileSetAtlasSource_q4ofp")
+sources/11 = SubResource("TileSetAtlasSource_7a65t")
+sources/12 = SubResource("TileSetAtlasSource_aykxq")
+sources/14 = SubResource("TileSetAtlasSource_m1ngu")
+sources/15 = SubResource("TileSetAtlasSource_c4580")
+sources/16 = SubResource("TileSetAtlasSource_opjwg")
+sources/20 = SubResource("TileSetAtlasSource_mm8mf")
+sources/21 = SubResource("TileSetAtlasSource_kssra")
+sources/30 = SubResource("TileSetAtlasSource_f6w76")
+sources/31 = SubResource("TileSetAtlasSource_2xuep")
+sources/40 = SubResource("TileSetAtlasSource_ws3o1")
+sources/41 = SubResource("TileSetAtlasSource_e4j4n")
+
+[node name="Gameworld" type="Node3D"]
+script = ExtResource("1_pd1xp")
+
+[node name="3D Renderer" type="Node3D" parent="."]
+script = ExtResource("26_f6w76")
+water_level_offset = -0.35
+
+[node name="Camera Controller" type="Node3D" parent="."]
+script = ExtResource("27_2xuep")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("28_h2wsm")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="."]
+tile_set = SubResource("TileSet_yqelb")
+rendering_quadrant_size = 32
+script = ExtResource("5_ets4q")
+auto_center_camera = true
+
+[node name="RichTextLabel" type="RichTextLabel" parent="."]
+offset_left = 11.0
+offset_top = 12.0
+offset_right = 168.0
+offset_bottom = 62.0
+text = "Press Tab to switch between 2D and 3D"
+fit_content = true
+
+[node name="TerrainManager" type="Node" parent="."]
+script = ExtResource("24_1yesx")
+
+[node name="ResourceSpawner" type="Node3D" parent="."]
+script = ExtResource("25_2dx10")

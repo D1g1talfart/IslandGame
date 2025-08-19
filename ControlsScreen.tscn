@@ -1,0 +1,58 @@
+[gd_scene load_steps=2 format=3 uid="uid://bv6d1r3qc3d6b"]
+
+[ext_resource type="Script" uid="uid://dp7ytblir2usv" path="res://controls.gd" id="1_tdcuh"]
+
+[node name="Controls" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_tdcuh")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -575.5
+offset_top = -312.0
+offset_right = 575.5
+offset_bottom = 312.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.194349, 0.194349, 0.194349, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -223.5
+offset_top = -37.0
+offset_right = 223.5
+offset_bottom = 37.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ControlsList" type="RichTextLabel" parent="VBoxContainer"]
+layout_mode = 2
+bbcode_enabled = true
+text = "WASD - Move Camera
+Mouse - Look Around
+Space - Generate New Island
+ESC - Show 2D View"
+fit_content = true
+horizontal_alignment = 1
+
+[node name="Back_Button" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "BACK"

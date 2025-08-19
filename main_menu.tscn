@@ -1,0 +1,92 @@
+[gd_scene load_steps=6 format=3 uid="uid://gc7oedhhn0vm"]
+
+[ext_resource type="Script" uid="uid://bv3a8v3ar0q3j" path="res://main_menu.gd" id="1_06t4h"]
+[ext_resource type="FontFile" uid="uid://b6r844eb144y2" path="res://Bread Island.ttf" id="2_7vrkn"]
+[ext_resource type="Script" uid="uid://cqdrgeoqlvvsj" path="res://play_button.gd" id="3_fu7sn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fu7sn"]
+bg_color = Color(0.184621, 0.699833, 0.503515, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 10
+shadow_color = Color(0.529412, 0, 0, 0.6)
+shadow_size = 9
+shadow_offset = Vector2(0.47, 0)
+
+[sub_resource type="Theme" id="Theme_jix8l"]
+Label/colors/font_color = Color(0.300521, 0.987717, 1, 1)
+Label/font_sizes/font_size = 50
+Label/fonts/font = ExtResource("2_7vrkn")
+Label/styles/normal = SubResource("StyleBoxFlat_fu7sn")
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_06t4h")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -576.0
+offset_top = -325.0
+offset_right = 579.0
+offset_bottom = 322.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.194349, 0.194349, 0.194349, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -328.5
+offset_top = -69.5
+offset_right = 328.5
+offset_bottom = 69.5
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme = SubResource("Theme_jix8l")
+text = "CUNT: Go Fuck Yourself 3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Play_Button" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "New Island"
+icon_alignment = 1
+script = ExtResource("3_fu7sn")
+
+[node name="Load_Button" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Load Island"
+
+[node name="Controls_Button" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Controls"
+
+[node name="Settings_Button" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Settings"
+
+[node name="Quit_Button" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Quit"

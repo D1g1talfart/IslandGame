@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3 uid="uid://dbn3nga0u3gba"]
+
+[ext_resource type="Script" uid="uid://bjclacvae2n8a" path="res://player.gd" id="1_xhfnw"]
+[ext_resource type="Script" uid="uid://dbtkreesrpmd8" path="res://inventory_manager.gd" id="2_kne1u"]
+[ext_resource type="Script" uid="uid://bs4p38j8mh8c5" path="res://inventory_ui.gd" id="3_e80uo"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_kpjcp"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_kne1u"]
+
+[node name="CharacterBody3D" type="CharacterBody3D"]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0)
+floor_constant_speed = true
+floor_block_on_wall = false
+floor_max_angle = 1.39626
+script = ExtResource("1_xhfnw")
+speed = 5.0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_kpjcp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+visible = false
+shape = SubResource("CapsuleShape3D_kne1u")
+
+[node name="InventoryManager" type="Node" parent="."]
+script = ExtResource("2_kne1u")
+
+[node name="InventoryUI" type="CanvasLayer" parent="."]
+layer = 10
+script = ExtResource("3_e80uo")
