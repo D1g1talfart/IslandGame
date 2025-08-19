@@ -46,6 +46,8 @@ func _ready():
 	if terrain_manager:
 		print("ResourceSpawner: Connected to TerrainManager")
 		terrain_manager.resource_spawned.connect(_on_resource_spawned)
+		# NEW: Connect to collection signal
+		terrain_manager.resource_collected.connect(_on_resource_collected)
 		
 		# If resources already exist, create visuals for them
 		if terrain_manager.spawned_resources.size() > 0:
@@ -740,3 +742,53 @@ func print_resource_stats():
 	print("Mesh types: ", resource_meshes.size())
 	print("Material types: ", resource_materials.size())
 	print("Auto create visuals: ", auto_create_visuals)
+
+# ============================================================================
+# RESOURCE COLLECTION HANDLING (NEW)
+# ============================================================================
+
+func _on_resource_collected(resource_data: Dictionary, drops: Array):
+	"""Called when TerrainManager collects a resource - remove the visual"""
+	print("ResourceSpawner: Resource collected - removing visual for ", resource_data.type)
+	remove_resource_visual(resource_data)
+
+func remove_resource_visual(resource_data: Dictionary):
+	"""Remove the visual for a specific resource"""
+	var visual_to_remove = null
+	var index_to_remove = -1
+	
+	# Find matching visual by type and position
+	for i in range(spawned_visual_resources.size()):
+		var visual_resource = spawned_visual_resources[i]
+		
+		# Match by type and approximate position (allow small differences due to floating point)
+		if visual_resource.type == resource_data.type:
+			var distance = visual_resource.world_pos.distance_to(resource_data.world_pos)
+			if distance < 0.1:  # Very close match
+				visual_to_remove = visual_resource
+				index_to_remove = i
+				break
+	
+	# Remove the visual
+	if visual_to_remove and is_instance_valid(visual_to_remove.visual_node):
+		print("ResourceSpawner: Removing visual node for ", resource_data.type)
+		visual_to_remove.visual_node.queue_free()
+		spawned_visual_resources.remove_at(index_to_remove)
+	else:
+		print("ResourceSpawner: WARNING - Could not find visual to remove for ", resource_data.type)
+
+func remove_resource_visual_by_position(world_pos: Vector3, resource_type: String = ""):
+	"""Alternative way to remove resource visual by position"""
+	for i in range(spawned_visual_resources.size() - 1, -1, -1):  # Iterate backwards
+		var visual_resource = spawned_visual_resources[i]
+		var distance = visual_resource.world_pos.distance_to(world_pos)
+		
+		if distance < 1.0:  # Within 1 meter
+			if resource_type == "" or visual_resource.type == resource_type:
+				print("ResourceSpawner: Removing visual at position ", world_pos)
+				if is_instance_valid(visual_resource.visual_node):
+					visual_resource.visual_node.queue_free()
+				spawned_visual_resources.remove_at(i)
+				return true
+	
+	return false

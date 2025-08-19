@@ -37,7 +37,7 @@ func _ready():
 
 func setup_cameras():
 	if camera_controller:
-		camera_3d = camera_controller.get_node("Camera Controller")
+		camera_3d = camera_controller.get_node("root/Node/GameWorld/Camera Controller")
 		if not camera_3d:
 			for child in camera_controller.get_children():
 				if child is Camera3D:

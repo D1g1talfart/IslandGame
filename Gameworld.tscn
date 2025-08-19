@@ -203,6 +203,7 @@ water_level_offset = -0.35
 script = ExtResource("27_2xuep")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(573, 323)
 script = ExtResource("28_h2wsm")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="."]
@@ -216,7 +217,7 @@ offset_left = 11.0
 offset_top = 12.0
 offset_right = 168.0
 offset_bottom = 62.0
-text = "Press Tab to switch between 2D and 3D"
+text = "Press Tab to open the map"
 fit_content = true
 
 [node name="TerrainManager" type="Node" parent="."]

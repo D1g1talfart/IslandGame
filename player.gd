@@ -33,6 +33,26 @@ func _ready():
 	var inventory_manager = $InventoryManager
 	if inventory_manager:
 		print("Inventory system ready!")
+		
+	# Create visual collection range indicator
+	create_collection_range_indicator()
+
+func create_collection_range_indicator():
+	var indicator = MeshInstance3D.new()
+	var cylinder = CylinderMesh.new()
+	cylinder.top_radius = 2.0  # Collection range
+	cylinder.bottom_radius = 2.0
+	cylinder.height = 0.1
+	indicator.mesh = cylinder
+	
+	var material = StandardMaterial3D.new()
+	material.albedo_color = Color.GREEN
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color.a = 0.3
+	indicator.material_override = material
+	
+	indicator.position.y = -0.9  # At ground level
+	add_child(indicator)
 
 func _physics_process(delta):
 	# Update terrain effects first
@@ -260,15 +280,51 @@ func try_interact_with_resources():
 		print("No resources nearby")
 		
 func try_gather_resource():
-	"""Gather resources when pressing E"""
-	var biome_info = get_current_biome_info()
-	if biome_info.has("nearby_resources"):
-		for resource in biome_info.nearby_resources:
-			var distance = global_position.distance_to(resource.world_pos)
-			if distance < 2.0:  # Within gathering range
-				$InventoryManager.add_item(resource.type.capitalize(), "resource", 1)
-				print("Gathered ", resource.type, "!")
-				return
+	"""Gather resources when pressing E - IMPROVED VERSION"""
+	if not terrain_manager:
+		print("No terrain manager - can't collect resources")
+		return
+	
+	var nearby_resources = terrain_manager.get_resources_near_position(global_position, 3.0)
+	
+	if nearby_resources.size() == 0:
+		print("No resources nearby to collect")
+		return
+	
+	# Find closest resource
+	var closest_resource = null
+	var closest_distance = 999.0
+	
+	for resource in nearby_resources:
+		var distance = global_position.distance_to(resource.world_pos)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_resource = resource
+	
+	# Collect the closest resource
+	if closest_resource and closest_distance < 3.0:
+		print("Collecting ", closest_resource.type, " at distance ", "%.1f" % closest_distance, "m")
+		var drops = terrain_manager.collect_resource(closest_resource)
+		
+		# Add all drops to inventory
+		var total_items_added = 0
+		var items_collected = []
+		
+		for drop in drops:
+			if $InventoryManager.add_item(drop.item, "resource", drop.amount):
+				total_items_added += drop.amount
+				items_collected.append(str(drop.amount) + " " + drop.item)
+				print("+ ", drop.amount, " ", drop.item)
+			else:
+				print("Inventory full - couldn't collect ", drop.item)
+		
+		if total_items_added > 0:
+			print("✓ Collected: ", ", ".join(items_collected))
+		else:
+			print("✗ Couldn't collect anything - inventory might be full")
+		
+	else:
+		print("No resources close enough to collect (closest: ", "%.1f" % closest_distance, "m)")
 
 func apply_environmental_damage():
 	"""Apply environmental effects like drowning, cold, etc."""

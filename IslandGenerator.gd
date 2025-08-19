@@ -58,7 +58,7 @@ class_name IslandDataGenerator
 
 @export_group("River Generation")
 @export var river_meandering: float = 0.4
-@export var side_flow_chance: float = 0.3
+@export var side_flow_chance: float = 0.2
 
 @export_group("Beach & Coast Generation")
 @export var south_beach_min: int = 5

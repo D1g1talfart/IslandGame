@@ -11,4 +11,8 @@ func _ready():
 	Mouse - Look Around
 	Space - Generate New Island
 	ESC - Return to Menu
+	I - Debug
+	O - Debug
+	P - Debug
+	E
 	"""

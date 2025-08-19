@@ -28,7 +28,7 @@ func _ready():
 	items.resize(TOTAL_SLOTS)
 	
 	# Debug: Add some starting items
-	add_item("Wood", "resource", 1)
+	add_item("Wood", "resource", 99)
 	add_item("Stone", "resource", 5)
 	add_item("Axe", "tool", 1)
 	

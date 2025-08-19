@@ -31,11 +31,17 @@ func show_loading_screen():
 	current_screen = loading_screen_scene.instantiate()
 	ui_layer.add_child(current_screen)
 
-# Modify show_game to not recreate world
+
 func show_game():
 	clear_current_screen()
 	if game_world:
 		game_world.visible = true
+		
+		# Activate inventory UI now that game is ready
+		var player = game_world.get_node_or_null("CharacterBody3D")  # Adjust path if needed
+		if player and player.has_node("InventoryUI"):
+			player.get_node("InventoryUI").show_inventory_ui()
+			print("Inventory UI activated for gameplay!")
 	# World already exists, just show it
 
 func show_controls():
