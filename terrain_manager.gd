@@ -407,6 +407,99 @@ func get_resources_of_type(resource_type: String) -> Array:
 			matching_resources.append(resource)
 	
 	return matching_resources
+	
+# ============================================================================
+# RESOURCE DROP SYSTEM (NEW)
+# ============================================================================
+
+# Define what each resource type drops when collected
+var resource_drop_tables: Dictionary = {
+	# All tree types drop "Wood"
+	"small_tree": [
+		{"item": "Wood", "min": 1, "max": 2, "chance": 1.0}
+	],
+	"oak_tree": [
+		{"item": "Wood", "min": 2, "max": 4, "chance": 1.0}
+	],
+	"pine_tree": [
+		{"item": "Wood", "min": 3, "max": 5, "chance": 1.0}
+	],
+	"ancient_tree": [
+		{"item": "Wood", "min": 4, "max": 8, "chance": 1.0},
+		{"item": "Rare Seed", "min": 1, "max": 1, "chance": 0.1}
+	],
+	
+	# All stone types drop "Stone" with chance of "Iron"
+	"stone_small": [
+		{"item": "Stone", "min": 1, "max": 2, "chance": 1.0},
+		{"item": "Iron", "min": 1, "max": 1, "chance": 0.05}
+	],
+	"stone_medium": [
+		{"item": "Stone", "min": 2, "max": 4, "chance": 1.0},
+		{"item": "Iron", "min": 1, "max": 1, "chance": 0.1}
+	],
+	
+	# Other resources
+	"driftwood": [
+		{"item": "Wood", "min": 1, "max": 2, "chance": 1.0}
+	],
+	"berry_bush": [
+		{"item": "Berries", "min": 2, "max": 5, "chance": 1.0}
+	],
+	"crystal_node": [
+		{"item": "Crystal", "min": 1, "max": 3, "chance": 1.0},
+		{"item": "Iron", "min": 1, "max": 1, "chance": 0.2}
+	],
+	"seashell": [
+		{"item": "Shell", "min": 1, "max": 1, "chance": 1.0}
+	],
+	"water_lily": [
+		{"item": "Lily Pad", "min": 1, "max": 1, "chance": 1.0}
+	],
+	"reed": [
+		{"item": "Reed", "min": 1, "max": 2, "chance": 1.0}
+	]
+}
+
+# Signal for when a resource is collected
+signal resource_collected(resource_data: Dictionary, drops: Array)
+
+func get_resource_drops(resource_type: String) -> Array:
+	"""Roll for what items a resource should drop when collected"""
+	var drops = []
+	
+	if not resource_drop_tables.has(resource_type):
+		print("WARNING: No drop table for resource type: ", resource_type)
+		return [{"item": resource_type.capitalize(), "amount": 1}]  # Fallback
+	
+	var drop_table = resource_drop_tables[resource_type]
+	
+	for drop_rule in drop_table:
+		if randf() <= drop_rule.chance:
+			var amount = randi_range(drop_rule.min, drop_rule.max)
+			drops.append({
+				"item": drop_rule.item,
+				"amount": amount
+			})
+	
+	return drops
+
+func collect_resource(resource_data: Dictionary) -> Array:
+	"""Collect a resource and remove it from the world"""
+	var drops = get_resource_drops(resource_data.type)
+	
+	# Remove from spawned resources
+	var index = spawned_resources.find(resource_data)
+	if index >= 0:
+		spawned_resources.remove_at(index)
+		print("TerrainManager: Collected ", resource_data.type, " - got ", drops.size(), " drops")
+		
+		# Emit signal so visual can be removed
+		resource_collected.emit(resource_data, drops)
+	else:
+		print("WARNING: Tried to collect resource that wasn't found in spawned_resources")
+	
+	return drops
 
 # ============================================================================
 # ENVIRONMENTAL EFFECTS SYSTEM

@@ -239,23 +239,6 @@ func is_water(x: int, y: int) -> bool:
 		TerrainType.RIVER_MOUTH
 	]
 
-func get_movement_cost(x: int, y: int) -> float:
-	"""Get movement cost for pathfinding"""
-	var terrain = get_terrain_at(x, y)
-	match terrain:
-		TerrainType.DEEP_OCEAN, TerrainType.RIVER, TerrainType.RIVER_1, TerrainType.RIVER_2, TerrainType.RIVER_3, TerrainType.DEEP_FRESHWATER_POND:
-			return -1.0  # Impassable
-		TerrainType.SHALLOW_SALTWATER, TerrainType.SHALLOW_FRESHWATER:
-			return 2.0
-		TerrainType.BEACH:
-			return 1.2
-		TerrainType.LEVEL0_GRASS, TerrainType.LEVEL1_GRASS, TerrainType.LEVEL2_GRASS, TerrainType.LEVEL3_GRASS:
-			return 1.0
-		TerrainType.LEVEL0_DIRT, TerrainType.LEVEL1_DIRT, TerrainType.LEVEL2_DIRT, TerrainType.LEVEL3_DIRT:
-			return 1.3
-		_:
-			return 1.0
-
 # ============================================================================
 # PUBLIC INTERFACE (for your main GameWorld script)
 # ============================================================================
