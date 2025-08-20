@@ -215,6 +215,64 @@ func _input(event):
 		
 	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and event.keycode == KEY_E):
 		try_gather_resource()
+		
+	if event is InputEventKey and event.pressed and event.keycode == KEY_F:
+		debug_resource_collection()
+	
+	# Press T to see what resources the terrain manager thinks are nearby
+	if event is InputEventKey and event.pressed and event.keycode == KEY_T:
+		debug_terrain_resources()
+		
+	if event is InputEventKey and event.pressed and event.keycode == KEY_Y:
+		if terrain_manager:
+			terrain_manager.sync_with_visual_spawner()
+	
+	# Press U to force full resync (nuclear option)
+	if event is InputEventKey and event.pressed and event.keycode == KEY_U:
+		if terrain_manager:
+			terrain_manager.force_full_resync()
+
+func debug_resource_collection():
+	"""Debug what resources are nearby and why collection might fail"""
+	print("\n=== RESOURCE COLLECTION DEBUG ===")
+	print("Player position: ", global_position)
+	
+	if not terrain_manager:
+		print("ERROR: No terrain manager!")
+		return
+	
+	# Check resources in increasing ranges
+	var ranges = [1.0, 2.0, 3.0, 5.0, 10.0]
+	for range_val in ranges:
+		var nearby = terrain_manager.get_resources_near_position(global_position, range_val)
+		print("Range ", range_val, "m: ", nearby.size(), " resources")
+		
+		for resource in nearby:
+			var distance = global_position.distance_to(resource.world_pos)
+			print("  - ", resource.type, " at ", resource.world_pos, " (", "%.2f" % distance, "m away)")
+	
+	# Check what the visual spawner thinks
+	var resource_spawner = get_node_or_null("../ResourceSpawner")
+	if resource_spawner:
+		var visual_nearby = resource_spawner.get_resources_near_position(global_position, 5.0)
+		print("Visual resources in 5m: ", visual_nearby.size())
+		for visual in visual_nearby:
+			var distance = global_position.distance_to(visual.world_pos)
+			print("  - Visual ", visual.type, " at ", visual.world_pos, " (", "%.2f" % distance, "m away)")
+
+func debug_terrain_resources():
+	"""Debug terrain manager resource data"""
+	if not terrain_manager:
+		return
+	
+	print("\n=== TERRAIN MANAGER RESOURCE DATA ===")
+	print("Total spawned resources: ", terrain_manager.spawned_resources.size())
+	
+	# Show first few resources
+	for i in range(min(5, terrain_manager.spawned_resources.size())):
+		var res = terrain_manager.spawned_resources[i]
+		var distance = global_position.distance_to(res.world_pos)
+		print(i, ": ", res.type, " at ", res.world_pos, " (", "%.2f" % distance, "m away)")
 
 func toggle_terrain_debug():
 	"""Toggle terrain debug info"""
@@ -280,51 +338,67 @@ func try_interact_with_resources():
 		print("No resources nearby")
 		
 func try_gather_resource():
-	"""Gather resources when pressing E - IMPROVED VERSION"""
+	"""Gather resources when pressing E - FIXED VERSION"""
 	if not terrain_manager:
 		print("No terrain manager - can't collect resources")
 		return
 	
-	var nearby_resources = terrain_manager.get_resources_near_position(global_position, 3.0)
+	print("\n--- Attempting to collect resource ---")
+	print("Player at: ", global_position)
+	
+	# Use a more generous search range first
+	var search_range = 5.0
+	var collect_range = 2.5  # Actual collection range
+	
+	var nearby_resources = terrain_manager.get_resources_near_position(global_position, search_range)
+	print("Found ", nearby_resources.size(), " resources within ", search_range, "m")
 	
 	if nearby_resources.size() == 0:
-		print("No resources nearby to collect")
+		print("No resources found nearby")
 		return
 	
-	# Find closest resource
-	var closest_resource = null
-	var closest_distance = 999.0
+	# Find closest collectible resource
+	var collectible_resources = []
 	
 	for resource in nearby_resources:
 		var distance = global_position.distance_to(resource.world_pos)
-		if distance < closest_distance:
-			closest_distance = distance
-			closest_resource = resource
+		print("Resource ", resource.type, " at distance ", "%.2f" % distance, "m")
+		
+		if distance <= collect_range:
+			collectible_resources.append({
+				"resource": resource,
+				"distance": distance
+			})
 	
-	# Collect the closest resource
-	if closest_resource and closest_distance < 3.0:
-		print("Collecting ", closest_resource.type, " at distance ", "%.1f" % closest_distance, "m")
-		var drops = terrain_manager.collect_resource(closest_resource)
-		
-		# Add all drops to inventory
-		var total_items_added = 0
-		var items_collected = []
-		
-		for drop in drops:
-			if $InventoryManager.add_item(drop.item, "resource", drop.amount):
-				total_items_added += drop.amount
-				items_collected.append(str(drop.amount) + " " + drop.item)
-				print("+ ", drop.amount, " ", drop.item)
-			else:
-				print("Inventory full - couldn't collect ", drop.item)
-		
-		if total_items_added > 0:
-			print("✓ Collected: ", ", ".join(items_collected))
+	if collectible_resources.size() == 0:
+		print("No resources within collection range (", collect_range, "m)")
+		print("Closest resource is ", "%.2f" % nearby_resources.map(func(r): return global_position.distance_to(r.world_pos)).min(), "m away")
+		return
+	
+	# Sort by distance and take closest
+	collectible_resources.sort_custom(func(a, b): return a.distance < b.distance)
+	var closest = collectible_resources[0].resource
+	
+	print("Collecting closest resource: ", closest.type, " at ", "%.2f" % collectible_resources[0].distance, "m")
+	
+	# Collect it
+	var drops = terrain_manager.collect_resource(closest)
+	
+	# Add to inventory
+	var total_items_added = 0
+	var items_collected = []
+	
+	for drop in drops:
+		if $InventoryManager.add_item(drop.item, "resource", drop.amount):
+			total_items_added += drop.amount
+			items_collected.append(str(drop.amount) + " " + drop.item)
 		else:
-			print("✗ Couldn't collect anything - inventory might be full")
-		
+			print("Inventory full - couldn't collect ", drop.item)
+	
+	if total_items_added > 0:
+		print("✓ Successfully collected: ", ", ".join(items_collected))
 	else:
-		print("No resources close enough to collect (closest: ", "%.1f" % closest_distance, "m)")
+		print("✗ Failed to collect anything")
 
 func apply_environmental_damage():
 	"""Apply environmental effects like drowning, cold, etc."""

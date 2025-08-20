@@ -206,6 +206,8 @@ func initialize_from_island_data():
 	
 	if auto_spawn_on_terrain_load:
 		spawn_all_resources()
+		# NEW: Clean up any issues
+		call_deferred("cleanup_invalid_resources")
 	
 	if enable_environmental_effects:
 		initialize_environmental_effects()
@@ -500,7 +502,124 @@ func collect_resource(resource_data: Dictionary) -> Array:
 		print("WARNING: Tried to collect resource that wasn't found in spawned_resources")
 	
 	return drops
+	
+func cleanup_invalid_resources():
+	"""Remove any invalid or duplicate resources from the spawned list"""
+	var original_count = spawned_resources.size()
+	var cleaned_resources = []
+	var seen_positions = {}
+	
+	for resource in spawned_resources:
+		# Check if resource data is valid
+		if not resource.has("type") or not resource.has("world_pos"):
+			print("TerrainManager: Removing invalid resource data")
+			continue
+		
+		# Check for duplicates at same position
+		var pos_key = str(resource.world_pos.round())  # Round to avoid floating point issues
+		if seen_positions.has(pos_key):
+			print("TerrainManager: Removing duplicate resource at ", resource.world_pos)
+			continue
+		
+		seen_positions[pos_key] = true
+		cleaned_resources.append(resource)
+	
+	spawned_resources = cleaned_resources
+	var removed_count = original_count - cleaned_resources.size()
+	
+	if removed_count > 0:
+		print("TerrainManager: Cleaned up ", removed_count, " invalid/duplicate resources")
 
+# ============================================================================
+# RESOURCE SYNCHRONIZATION (NEW)
+# ============================================================================
+
+func sync_with_visual_spawner():
+	"""Sync resource data with visual spawner to fix mismatches"""
+	var resource_spawner = get_node_or_null("../ResourceSpawner") 
+	if not resource_spawner:
+		resource_spawner = get_tree().get_first_node_in_group("resource_spawner")
+	
+	if not resource_spawner:
+		print("TerrainManager: No ResourceSpawner found for sync")
+		return
+	
+	print("\n=== SYNCING RESOURCES ===")
+	print("Before sync:")
+	print("- TerrainManager has ", spawned_resources.size(), " data resources")
+	print("- ResourceSpawner has ", resource_spawner.spawned_visual_resources.size(), " visual resources")
+	
+	# Create data for visual resources that don't have data
+	for visual_resource in resource_spawner.spawned_visual_resources:
+		var data_exists = false
+		
+		# Check if we already have data for this visual
+		for data_resource in spawned_resources:
+			var distance = visual_resource.world_pos.distance_to(data_resource.world_pos)
+			if distance < 0.5 and visual_resource.type == data_resource.type:
+				data_exists = true
+				break
+		
+		# If no data exists, create it
+		if not data_exists:
+			print("Creating missing data for visual ", visual_resource.type, " at ", visual_resource.world_pos)
+			var tile_pos = world_pos_to_tile_pos(visual_resource.world_pos)
+			var resource_data = {
+				"type": visual_resource.type,
+				"world_pos": visual_resource.world_pos,
+				"tile_pos": tile_pos,
+				"spawn_time": Time.get_ticks_msec()
+			}
+			spawned_resources.append(resource_data)
+	
+	# Remove visuals that don't have data (optional - or we could create data for them)
+	var visuals_to_remove = []
+	for i in range(resource_spawner.spawned_visual_resources.size() - 1, -1, -1):
+		var visual_resource = resource_spawner.spawned_visual_resources[i]
+		var has_data = false
+		
+		for data_resource in spawned_resources:
+			var distance = visual_resource.world_pos.distance_to(data_resource.world_pos)
+			if distance < 0.5 and visual_resource.type == data_resource.type:
+				has_data = true
+				break
+		
+		# Comment out this section if you want to keep visuals and create data instead
+		if not has_data:
+			visuals_to_remove.append(i)
+	
+	# Remove orphaned visuals (if wanted)
+	for i in visuals_to_remove:
+		var visual = resource_spawner.spawned_visual_resources[i]
+		if is_instance_valid(visual.visual_node):
+			visual.visual_node.queue_free()
+		resource_spawner.spawned_visual_resources.remove_at(i)
+	
+	print("After sync:")
+	print("- TerrainManager has ", spawned_resources.size(), " data resources")
+	print("- ResourceSpawner has ", resource_spawner.spawned_visual_resources.size(), " visual resources")
+	print("=== SYNC COMPLETE ===\n")
+
+func force_full_resync():
+	"""Nuclear option - completely rebuild resource system"""
+	print("TerrainManager: FULL RESYNC - clearing and rebuilding everything")
+	
+	# Clear all data
+	spawned_resources.clear()
+	
+	# Clear all visuals
+	var resource_spawner = get_node_or_null("../ResourceSpawner") 
+	if not resource_spawner:
+		resource_spawner = get_tree().get_first_node_in_group("resource_spawner")
+	
+	if resource_spawner:
+		resource_spawner.clear_all_visuals()
+	
+	# Respawn everything fresh
+	spawn_all_resources()
+	
+	print("TerrainManager: Full resync complete - ", spawned_resources.size(), " resources spawned")
+	
 # ============================================================================
 # ENVIRONMENTAL EFFECTS SYSTEM
 # ============================================================================

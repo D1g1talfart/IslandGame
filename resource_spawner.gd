@@ -46,13 +46,14 @@ func _ready():
 	if terrain_manager:
 		print("ResourceSpawner: Connected to TerrainManager")
 		terrain_manager.resource_spawned.connect(_on_resource_spawned)
-		# NEW: Connect to collection signal
 		terrain_manager.resource_collected.connect(_on_resource_collected)
 		
-		# If resources already exist, create visuals for them
-		if terrain_manager.spawned_resources.size() > 0:
-			print("ResourceSpawner: Creating visuals for existing resources...")
-			create_all_existing_resource_visuals()
+		# Wait for terrain manager to be fully ready before creating visuals
+		if terrain_manager.current_island_data == null:
+			print("ResourceSpawner: Waiting for TerrainManager to initialize...")
+			terrain_manager.terrain_updated.connect(_on_terrain_ready)
+		else:
+			call_deferred("create_visuals_when_ready")
 	else:
 		print("ResourceSpawner: No TerrainManager found!")
 	
@@ -61,6 +62,20 @@ func _ready():
 	
 	# Create resource meshes and materials
 	setup_resource_visuals()
+
+func _on_terrain_ready():
+	"""Called when terrain manager finishes initializing"""
+	print("ResourceSpawner: Terrain ready, creating visuals...")
+	call_deferred("create_visuals_when_ready")
+
+func create_visuals_when_ready():
+	"""Create visuals only after terrain manager is ready"""
+	if terrain_manager and terrain_manager.spawned_resources.size() > 0:
+		# Clear any existing visuals first
+		clear_all_visuals()
+		# Create visuals for terrain manager's resources
+		create_all_existing_resource_visuals()
+		print("ResourceSpawner: Created visuals for ", terrain_manager.spawned_resources.size(), " resources")
 
 func find_player():
 	"""Find player reference for interactions"""

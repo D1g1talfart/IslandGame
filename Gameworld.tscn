@@ -197,7 +197,6 @@ script = ExtResource("1_pd1xp")
 
 [node name="3D Renderer" type="Node3D" parent="."]
 script = ExtResource("26_f6w76")
-water_level_offset = -0.35
 
 [node name="Camera Controller" type="Node3D" parent="."]
 script = ExtResource("27_2xuep")
