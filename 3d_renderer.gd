@@ -8,9 +8,8 @@ signal island_rendered
 # ============================================================================
 
 @export_group("3D Rendering Settings")
-@export var tile_size: float = 1.0
+@export var tile_size: float = 2.0
 @export var height_scale: float = 3.0
-@export var water_level_offset: float = -0.5
 @export var auto_render_on_ready: bool = true
 @export var show_debug_info: bool = true
 
@@ -25,6 +24,11 @@ signal island_rendered
 
 @export_group("Transition Settings")
 @export var corner_extension_multiplier: float = 1.2
+
+@export_group("Water Settings")
+@export var water_surface_offset: float = -0.05  # Water surface height (less offset than bed)
+@export var water_bed_offset: float = -0.5      # Water bed height (current water_level_offset)
+@export var water_surface_alpha: float = 0.7    # Transparency of water surface
 
 # ============================================================================
 # RENDERING DATA
@@ -99,20 +103,29 @@ func setup_lighting():
 		camera.environment = environment
 
 func setup_materials():
-	# Water materials
-	materials[TerrainType.DEEP_OCEAN] = create_water_material(Color(0.1, 0.2, 0.6, 0.8), true)
-	materials[TerrainType.SHALLOW_SALTWATER] = create_water_material(Color(0.2, 0.4, 0.8, 0.7), false)
-	materials[TerrainType.SHALLOW_FRESHWATER] = create_water_material(Color(0.3, 0.6, 0.8, 0.7), false)
-	materials[TerrainType.DEEP_FRESHWATER_POND] = create_water_material(Color(0.2, 0.3, 0.7, 0.8), true)
+	# Water BED materials (sand-colored, solid)
+	materials["bed_" + str(TerrainType.DEEP_OCEAN)] = create_water_bed_material(Color(0.9, 0.8, 0.6))
+	materials["bed_" + str(TerrainType.SHALLOW_SALTWATER)] = create_water_bed_material(Color(0.9, 0.8, 0.6))
+	materials["bed_" + str(TerrainType.SHALLOW_FRESHWATER)] = create_water_bed_material(Color(0.8, 0.7, 0.5))
+	materials["bed_" + str(TerrainType.DEEP_FRESHWATER_POND)] = create_water_bed_material(Color(0.7, 0.6, 0.4))
+	materials["bed_" + str(TerrainType.RIVER)] = create_water_bed_material(Color(0.8, 0.7, 0.5))
+	materials["bed_" + str(TerrainType.RIVER_1)] = create_water_bed_material(Color(0.8, 0.7, 0.5))
+	materials["bed_" + str(TerrainType.RIVER_2)] = create_water_bed_material(Color(0.8, 0.7, 0.5))
+	materials["bed_" + str(TerrainType.RIVER_3)] = create_water_bed_material(Color(0.8, 0.7, 0.5))
+	materials["bed_" + str(TerrainType.RIVER_MOUTH)] = create_water_bed_material(Color(0.9, 0.8, 0.6))
 	
-	# River materials
-	materials[TerrainType.RIVER] = create_water_material(Color(0.4, 0.7, 0.9, 0.7), false)
-	materials[TerrainType.RIVER_1] = create_water_material(Color(0.4, 0.7, 0.9, 0.7), false)
-	materials[TerrainType.RIVER_2] = create_water_material(Color(0.4, 0.7, 0.9, 0.7), false)
-	materials[TerrainType.RIVER_3] = create_water_material(Color(0.4, 0.7, 0.9, 0.7), false)
-	materials[TerrainType.RIVER_MOUTH] = create_water_material(Color(0.5, 0.8, 0.9, 0.6), false)
+	# Water SURFACE materials (transparent blue, no collision)
+	materials["surface_" + str(TerrainType.DEEP_OCEAN)] = create_water_surface_material(Color(0.1, 0.2, 0.6, water_surface_alpha), true)
+	materials["surface_" + str(TerrainType.SHALLOW_SALTWATER)] = create_water_surface_material(Color(0.2, 0.4, 0.8, water_surface_alpha), false)
+	materials["surface_" + str(TerrainType.SHALLOW_FRESHWATER)] = create_water_surface_material(Color(0.3, 0.6, 0.8, water_surface_alpha), false)
+	materials["surface_" + str(TerrainType.DEEP_FRESHWATER_POND)] = create_water_surface_material(Color(0.2, 0.3, 0.7, water_surface_alpha), true)
+	materials["surface_" + str(TerrainType.RIVER)] = create_water_surface_material(Color(0.4, 0.7, 0.9, water_surface_alpha), false)
+	materials["surface_" + str(TerrainType.RIVER_1)] = create_water_surface_material(Color(0.4, 0.7, 0.9, water_surface_alpha), false)
+	materials["surface_" + str(TerrainType.RIVER_2)] = create_water_surface_material(Color(0.4, 0.7, 0.9, water_surface_alpha), false)
+	materials["surface_" + str(TerrainType.RIVER_3)] = create_water_surface_material(Color(0.4, 0.7, 0.9, water_surface_alpha), false)
+	materials["surface_" + str(TerrainType.RIVER_MOUTH)] = create_water_surface_material(Color(0.5, 0.8, 0.9, water_surface_alpha), false)
 	
-	# Land materials
+	# Land materials (unchanged)
 	materials[TerrainType.BEACH] = create_land_material(Color(0.9, 0.8, 0.6))
 	materials[TerrainType.LEVEL0_GRASS] = create_land_material(Color(0.3, 0.6, 0.2))
 	materials[TerrainType.LEVEL0_DIRT] = create_land_material(Color(0.6, 0.4, 0.2))
@@ -122,6 +135,38 @@ func setup_materials():
 	materials[TerrainType.LEVEL2_DIRT] = create_land_material(Color(0.8, 0.6, 0.4))
 	materials[TerrainType.LEVEL3_GRASS] = create_land_material(Color(0.6, 0.9, 0.5))
 	materials[TerrainType.LEVEL3_DIRT] = create_land_material(Color(0.9, 0.7, 0.5))
+
+# Add these new material creation functions
+func create_water_bed_material(color: Color) -> StandardMaterial3D:
+	"""Create sandy bottom material for water beds"""
+	var material = StandardMaterial3D.new()
+	material.albedo_color = color
+	material.metallic = 0.0
+	material.roughness = 0.9  # Sandy texture
+	material.emission_enabled = true
+	material.emission = color * 0.05
+	return material
+
+func create_water_surface_material(color: Color, is_deep: bool) -> StandardMaterial3D:
+	"""Create transparent water surface material"""
+	var material = StandardMaterial3D.new()
+	material.albedo_color = color
+	material.metallic = 0.0
+	material.roughness = 0.1
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	
+	if is_deep:
+		material.emission_enabled = true
+		material.emission = Color(0.0, 0.1, 0.3) * 0.1
+	
+	# Make it look more water-like
+	material.clearcoat_enabled = true
+	material.clearcoat = 0.5
+	material.rim_enabled = true
+	material.rim = 0.3
+	material.rim_tint = 0.5
+	
+	return material
 
 func create_water_material(color: Color, is_deep: bool) -> StandardMaterial3D:
 	var material = StandardMaterial3D.new()
@@ -203,9 +248,9 @@ func refresh_3d_view():
 # ============================================================================
 
 func get_terrain_level_height(terrain_type: int, tile_pos: Vector2i) -> float:
-	"""RESTORED: Get height based on terrain level, not raw height data"""
+	"""Get height based on terrain level - uses water SURFACE height for water terrain"""
 	if is_water_terrain(terrain_type):
-		return get_water_level_height(tile_pos)
+		return get_water_surface_height(tile_pos)  # Use surface height for interactions
 	else:
 		return get_land_level_height(terrain_type)
 
@@ -225,26 +270,85 @@ func get_land_level_height(terrain_type: int) -> float:
 		_:
 			return 0.0 * height_scale
 
-func get_water_level_height(tile_pos: Vector2i) -> float:
-	"""RESTORED: Water height - ocean at sea level, ponds adapt, rivers at fixed levels"""
+func get_water_bed_height(tile_pos: Vector2i) -> float:
+	"""Get height for water bed (bottom of water)"""
 	if not current_island_data:
-		return water_level_offset
+		return water_bed_offset
 	
 	var water_terrain_type = current_island_data.terrain_data[tile_pos.y][tile_pos.x]
 	
-	# Ocean and saltwater stay at sea level
+	# Ocean and saltwater beds at sea level
 	if is_ocean_or_saltwater(water_terrain_type):
-		return 0.0 + water_level_offset
+		return 0.0 + water_bed_offset
 	
-	# Rivers get fixed height levels like terrain
+	# Rivers get fixed bed height levels
 	if is_river_water(water_terrain_type):
-		return get_river_level_height(water_terrain_type)
+		return get_river_level_height_bed(water_terrain_type)
 	
-	# Only ponds adapt to surrounding terrain
+	# Ponds adapt to surrounding terrain
 	if is_pond_water(water_terrain_type):
-		return get_pond_level_height(tile_pos)
+		return get_pond_level_height_bed(tile_pos)
 	
-	return 0.0 + water_level_offset
+	return 0.0 + water_bed_offset
+
+func get_water_surface_height(tile_pos: Vector2i) -> float:
+	"""Get height for water surface (top of water)"""
+	if not current_island_data:
+		return water_surface_offset
+	
+	var water_terrain_type = current_island_data.terrain_data[tile_pos.y][tile_pos.x]
+	
+	# Ocean and saltwater surface at sea level
+	if is_ocean_or_saltwater(water_terrain_type):
+		return 0.0 + water_surface_offset
+	
+	# Rivers get fixed surface height levels
+	if is_river_water(water_terrain_type):
+		return get_river_level_height_surface(water_terrain_type)
+	
+	# Ponds adapt to surrounding terrain
+	if is_pond_water(water_terrain_type):
+		return get_pond_level_height_surface(tile_pos)
+	
+	return 0.0 + water_surface_offset
+
+func get_river_level_height_bed(terrain_type: int) -> float:
+	"""Get bed height for river water"""
+	match terrain_type:
+		TerrainType.RIVER, TerrainType.RIVER_MOUTH:
+			return 0.0 * height_scale + water_bed_offset
+		TerrainType.RIVER_1:
+			return 1.0 * height_scale + water_bed_offset
+		TerrainType.RIVER_2:
+			return 2.0 * height_scale + water_bed_offset
+		TerrainType.RIVER_3:
+			return 3.0 * height_scale + water_bed_offset
+		_:
+			return 0.0 * height_scale + water_bed_offset
+
+func get_river_level_height_surface(terrain_type: int) -> float:
+	"""Get surface height for river water"""
+	match terrain_type:
+		TerrainType.RIVER, TerrainType.RIVER_MOUTH:
+			return 0.0 * height_scale + water_surface_offset
+		TerrainType.RIVER_1:
+			return 1.0 * height_scale + water_surface_offset
+		TerrainType.RIVER_2:
+			return 2.0 * height_scale + water_surface_offset
+		TerrainType.RIVER_3:
+			return 3.0 * height_scale + water_surface_offset
+		_:
+			return 0.0 * height_scale + water_surface_offset
+
+func get_pond_level_height_bed(tile_pos: Vector2i) -> float:
+	"""Pond bed height"""
+	var base_level = find_nearest_land_level(tile_pos, current_island_data.terrain_data)
+	return base_level * height_scale + water_bed_offset
+
+func get_pond_level_height_surface(tile_pos: Vector2i) -> float:
+	"""Pond surface height"""
+	var base_level = find_nearest_land_level(tile_pos, current_island_data.terrain_data)
+	return base_level * height_scale + water_surface_offset
 
 func is_river_water(terrain_type: int) -> bool:
 	"""Check if terrain is river water with fixed height levels"""
@@ -263,29 +367,6 @@ func is_pond_water(terrain_type: int) -> bool:
 		TerrainType.DEEP_FRESHWATER_POND
 	]
 
-func get_river_level_height(terrain_type: int) -> float:
-	"""Get fixed height for river water based on river level"""
-	match terrain_type:
-		TerrainType.RIVER, TerrainType.RIVER_MOUTH:
-			return 0.0 * height_scale + water_level_offset  # Sea level rivers
-		TerrainType.RIVER_1:
-			return 1.0 * height_scale + water_level_offset  # Level 1 rivers
-		TerrainType.RIVER_2:
-			return 2.0 * height_scale + water_level_offset  # Level 2 rivers
-		TerrainType.RIVER_3:
-			return 3.0 * height_scale + water_level_offset  # Level 3 rivers
-		_:
-			return 0.0 * height_scale + water_level_offset
-
-func get_pond_level_height(tile_pos: Vector2i) -> float:
-	"""Pond height adapts to surrounding terrain (old freshwater behavior)"""
-	if not current_island_data:
-		return water_level_offset
-	
-	var base_level = find_nearest_land_level(tile_pos, current_island_data.terrain_data)
-	return base_level * height_scale + water_level_offset
-
-
 
 
 func is_ocean_or_saltwater(terrain_type: int) -> bool:
@@ -303,10 +384,10 @@ func is_freshwater(terrain_type: int) -> bool:
 func get_freshwater_level_height(tile_pos: Vector2i) -> float:
 	"""RESTORED: Freshwater height based on surrounding terrain"""
 	if not current_island_data:
-		return water_level_offset
+		return water_bed_offset
 	
 	var base_level = find_nearest_land_level(tile_pos, current_island_data.terrain_data)
-	return base_level * height_scale + water_level_offset
+	return base_level * height_scale + water_bed_offset
 
 func find_nearest_land_level(tile_pos: Vector2i, terrain_data: Array) -> float:
 	"""RESTORED: Find nearest land level, expanding search radius"""
@@ -396,7 +477,7 @@ func create_cliff_faces_from_data(island_data):
 					var height_diff = current_height - neighbor_height
 					if height_diff > 0.01:
 	# Skip small land-water transitions (those will be slopes)
-						if is_water_terrain(neighbor_terrain) and not is_water_terrain(terrain_type) and height_diff <= abs(water_level_offset) + 0.1:
+						if is_water_terrain(neighbor_terrain) and not is_water_terrain(terrain_type) and height_diff <= abs(water_bed_offset) + 0.1:
 							continue
 						var cliff_face_data = {
 							"world_pos": world_pos,
@@ -529,6 +610,94 @@ func create_water_cliff_mesh(terrain_type: int, cliff_faces: Array):
 	
 	add_child(mesh_instance)
 	mesh_instances.append(mesh_instance)
+	
+func create_water_bed_mesh(terrain_type: int, tiles: Array):
+	"""Create water bed mesh (sandy bottom with collision)"""
+	if tiles.size() == 0:
+		return
+	
+	var mesh_instance = MeshInstance3D.new()
+	mesh_instance.name = "WaterBed_" + str(terrain_type)
+	
+	var array_mesh = ArrayMesh.new()
+	var vertices = PackedVector3Array()
+	var normals = PackedVector3Array()
+	var uvs = PackedVector2Array()
+	var indices = PackedInt32Array()
+	
+	var vertex_index = 0
+	
+	for tile_data in tiles:
+		var pos = tile_data.position
+		var height = get_water_bed_height(pos)
+		var world_pos = Vector3(pos.x * tile_size, height, pos.y * tile_size)
+		
+		vertex_index = add_horizontal_face(vertices, normals, uvs, indices, world_pos, vertex_index, true)
+	
+	var arrays = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	
+	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh_instance.mesh = array_mesh
+	
+	# Apply bed material
+	var bed_material_key = "bed_" + str(terrain_type)
+	if bed_material_key in materials:
+		mesh_instance.material_override = materials[bed_material_key]
+	
+	# Enable collision for bed
+	if create_collision:
+		mesh_instance.create_trimesh_collision()
+	
+	add_child(mesh_instance)
+	mesh_instances.append(mesh_instance)
+
+func create_water_surface_mesh(terrain_type: int, tiles: Array):
+	"""Create water surface mesh (transparent blue, no collision)"""
+	if tiles.size() == 0:
+		return
+	
+	var mesh_instance = MeshInstance3D.new()
+	mesh_instance.name = "WaterSurface_" + str(terrain_type)
+	
+	var array_mesh = ArrayMesh.new()
+	var vertices = PackedVector3Array()
+	var normals = PackedVector3Array()
+	var uvs = PackedVector2Array()
+	var indices = PackedInt32Array()
+	
+	var vertex_index = 0
+	
+	for tile_data in tiles:
+		var pos = tile_data.position
+		var height = get_water_surface_height(pos)
+		var world_pos = Vector3(pos.x * tile_size, height, pos.y * tile_size)
+		
+		vertex_index = add_horizontal_face(vertices, normals, uvs, indices, world_pos, vertex_index, true)
+	
+	var arrays = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	
+	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh_instance.mesh = array_mesh
+	
+	# Apply surface material
+	var surface_material_key = "surface_" + str(terrain_type)
+	if surface_material_key in materials:
+		mesh_instance.material_override = materials[surface_material_key]
+	
+	# NO collision for water surface - players walk through it!
+	
+	add_child(mesh_instance)
+	mesh_instances.append(mesh_instance)
 
 func get_dirt_material_for_level(terrain_level: int) -> StandardMaterial3D:
 	"""RESTORED: Get dirt material for terrain level"""
@@ -584,26 +753,44 @@ func add_vertical_wall(vertices: PackedVector3Array, normals: PackedVector3Array
 # ============================================================================
 
 func create_terrain_chunks_from_data(island_data):
-	"""Create horizontal terrain surfaces using PROPER height calculation"""
-	var terrain_groups = {}
+	"""Create terrain surfaces - separating water beds, water surfaces, and land"""
+	var land_groups = {}
+	var water_bed_groups = {}
+	var water_surface_groups = {}
 	
 	for y in range(island_data.island_height):
 		for x in range(island_data.island_width):
 			if y < island_data.terrain_data.size() and x < island_data.terrain_data[y].size():
 				var terrain_type = island_data.terrain_data[y][x]
 				
-				if terrain_type not in terrain_groups:
-					terrain_groups[terrain_type] = []
-				
-				terrain_groups[terrain_type].append({
-					"position": Vector2i(x, y)
-				})
+				if is_water_terrain(terrain_type):
+					# Separate water into bed and surface
+					if terrain_type not in water_bed_groups:
+						water_bed_groups[terrain_type] = []
+					if terrain_type not in water_surface_groups:
+						water_surface_groups[terrain_type] = []
+					
+					water_bed_groups[terrain_type].append({"position": Vector2i(x, y)})
+					water_surface_groups[terrain_type].append({"position": Vector2i(x, y)})
+				else:
+					# Regular land terrain
+					if terrain_type not in land_groups:
+						land_groups[terrain_type] = []
+					land_groups[terrain_type].append({"position": Vector2i(x, y)})
 	
-	# Create meshes for each terrain type
-	for terrain_type in terrain_groups.keys():
-		create_terrain_mesh(terrain_type, terrain_groups[terrain_type])
+	# Create land meshes
+	for terrain_type in land_groups.keys():
+		create_terrain_mesh(terrain_type, land_groups[terrain_type], false)
+	
+	# Create water bed meshes (with collision)
+	for terrain_type in water_bed_groups.keys():
+		create_water_bed_mesh(terrain_type, water_bed_groups[terrain_type])
+	
+	# Create water surface meshes (no collision)
+	for terrain_type in water_surface_groups.keys():
+		create_water_surface_mesh(terrain_type, water_surface_groups[terrain_type])
 
-func create_terrain_mesh(terrain_type: int, tiles: Array):
+func create_terrain_mesh(terrain_type: int, tiles: Array, is_water: bool = false):
 	"""Create horizontal terrain mesh using RESTORED height system"""
 	if tiles.size() == 0:
 		return
@@ -726,8 +913,10 @@ func create_sloped_transitions_from_data(island_data):
 					var neighbor_height = get_terrain_level_height(neighbor_terrain, neighbor_pos)
 					
 					# Check if this is a land-water boundary with small height difference
-					var height_diff = current_height - neighbor_height
-					if is_water_terrain(neighbor_terrain) and height_diff > 0.01 and height_diff <= abs(water_level_offset) + 0.1:
+					# Check if this is a land-water boundary - use bed height for proper depth
+					var neighbor_bed_height = get_water_bed_height(neighbor_pos) if is_water_terrain(neighbor_terrain) else neighbor_height
+					var height_diff = current_height - neighbor_bed_height
+					if is_water_terrain(neighbor_terrain) and height_diff > 0.01 and height_diff <= abs(water_bed_offset) + 0.1:
 						var slope_face_data = {
 							"world_pos": world_pos,
 							"edge_start": dir.edge_start,
@@ -870,7 +1059,7 @@ func create_corner_triangles_from_data(island_data):
 								var height_diff = current_height - neighbor_height
 								
 								# Check if this would create a slope (same logic as slopes)
-								if height_diff > 0.01 and height_diff <= abs(water_level_offset) + 0.1:
+								if height_diff > 0.01 and height_diff <= abs(water_bed_offset) + 0.1:
 									valid_slopes += 1
 					
 					# If both adjacent sides have water that create slopes, we need a corner
@@ -918,7 +1107,7 @@ func create_corner_mesh_simple(corner_faces: Array):
 		
 		# Calculate where slope edges would actually intersect
 		# Slopes extend outward by height_diff amount for 45-degree angle
-		var height_diff = abs(water_level_offset)
+		var height_diff = abs(water_bed_offset)
 		
 		# Bottom points should be exactly where two slope edges meet
 		var bottom1: Vector3
