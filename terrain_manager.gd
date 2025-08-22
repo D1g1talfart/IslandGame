@@ -8,6 +8,7 @@ class_name TerrainManager
 signal terrain_updated
 signal resource_spawned(resource_type: String, world_pos: Vector3)
 signal environmental_effect_triggered(effect_type: String, area: Array)
+signal resource_collected(resource_data: Dictionary, drops: Array)
 
 @export_group("Movement Settings")
 @export var enable_movement_costs: bool = true
@@ -15,7 +16,7 @@ signal environmental_effect_triggered(effect_type: String, area: Array)
 
 @export_group("Resource Settings") 
 @export var enable_resource_spawning: bool = true
-@export var resource_spawn_density: float = 0.1
+@export var resource_spawn_density: float = 0.3
 @export var auto_spawn_on_terrain_load: bool = true
 
 @export_group("Environmental Settings")
@@ -416,63 +417,55 @@ func get_resources_of_type(resource_type: String) -> Array:
 
 # Define what each resource type drops when collected
 var resource_drop_tables: Dictionary = {
-	# All tree types drop "Wood"
 	"small_tree": [
-		{"item": "Wood", "min": 1, "max": 2, "chance": 1.0}
+		{"item_id": 1, "min": 1, "max": 2, "chance": 1.0}  # Wood
 	],
 	"oak_tree": [
-		{"item": "Wood", "min": 2, "max": 4, "chance": 1.0}
+		{"item_id": 1, "min": 2, "max": 4, "chance": 1.0}  # Wood
 	],
 	"pine_tree": [
-		{"item": "Wood", "min": 3, "max": 5, "chance": 1.0}
+		{"item_id": 1, "min": 3, "max": 5, "chance": 1.0}  # Wood
 	],
 	"ancient_tree": [
-		{"item": "Wood", "min": 4, "max": 8, "chance": 1.0},
-		{"item": "Rare Seed", "min": 1, "max": 1, "chance": 0.1}
+		{"item_id": 1, "min": 4, "max": 8, "chance": 1.0},  # Wood
+		{"item_id": 6, "min": 1, "max": 1, "chance": 0.1}   # Rare Seed (add to database)
 	],
-	
-	# All stone types drop "Stone" with chance of "Iron"
 	"stone_small": [
-		{"item": "Stone", "min": 1, "max": 2, "chance": 1.0},
-		{"item": "Iron", "min": 1, "max": 1, "chance": 0.05}
+		{"item_id": 2, "min": 1, "max": 2, "chance": 1.0},  # Stone
+		{"item_id": 3, "min": 1, "max": 1, "chance": 0.2}  # Iron
 	],
 	"stone_medium": [
-		{"item": "Stone", "min": 2, "max": 4, "chance": 1.0},
-		{"item": "Iron", "min": 1, "max": 1, "chance": 0.1}
+		{"item_id": 2, "min": 2, "max": 4, "chance": 1.0},  # Stone  
+		{"item_id": 3, "min": 1, "max": 1, "chance": 0.5}   # Iron
 	],
-	
-	# Other resources
 	"driftwood": [
-		{"item": "Wood", "min": 1, "max": 2, "chance": 1.0}
+		{"item_id": 1, "min": 1, "max": 2, "chance": 1.0}   # Wood
 	],
 	"berry_bush": [
-		{"item": "Berries", "min": 2, "max": 5, "chance": 1.0}
+		{"item_id": 4, "min": 2, "max": 5, "chance": 1.0}   # Berries
 	],
 	"crystal_node": [
-		{"item": "Crystal", "min": 1, "max": 3, "chance": 1.0},
-		{"item": "Iron", "min": 1, "max": 1, "chance": 0.2}
+		{"item_id": 5, "min": 1, "max": 3, "chance": 1.0},  # Crystal
+		{"item_id": 3, "min": 1, "max": 1, "chance": 0.2}   # Iron
 	],
 	"seashell": [
-		{"item": "Shell", "min": 1, "max": 1, "chance": 1.0}
+		{"item_id": 7, "min": 1, "max": 1, "chance": 1.0}   # Shell (add to database)
 	],
 	"water_lily": [
-		{"item": "Lily Pad", "min": 1, "max": 1, "chance": 1.0}
+		{"item_id": 8, "min": 1, "max": 1, "chance": 1.0}   # Lily Pad (add to database)
 	],
 	"reed": [
-		{"item": "Reed", "min": 1, "max": 2, "chance": 1.0}
+		{"item_id": 9, "min": 1, "max": 2, "chance": 1.0}   # Reed (add to database)
 	]
 }
 
-# Signal for when a resource is collected
-signal resource_collected(resource_data: Dictionary, drops: Array)
-
+# UPDATED: Get drops method using IDs
 func get_resource_drops(resource_type: String) -> Array:
-	"""Roll for what items a resource should drop when collected"""
 	var drops = []
 	
 	if not resource_drop_tables.has(resource_type):
 		print("WARNING: No drop table for resource type: ", resource_type)
-		return [{"item": resource_type.capitalize(), "amount": 1}]  # Fallback
+		return []
 	
 	var drop_table = resource_drop_tables[resource_type]
 	
@@ -480,7 +473,7 @@ func get_resource_drops(resource_type: String) -> Array:
 		if randf() <= drop_rule.chance:
 			var amount = randi_range(drop_rule.min, drop_rule.max)
 			drops.append({
-				"item": drop_rule.item,
+				"item_id": drop_rule.item_id,
 				"amount": amount
 			})
 	
@@ -495,6 +488,22 @@ func collect_resource(resource_data: Dictionary) -> Array:
 	if index >= 0:
 		spawned_resources.remove_at(index)
 		print("TerrainManager: Collected ", resource_data.type, " - got ", drops.size(), " drops")
+		
+		# AUTO-ADD TO INVENTORY (if inventory manager exists)
+		var inventory_manager = get_tree().get_first_node_in_group("inventory_manager")
+		if not inventory_manager:
+			inventory_manager = get_node_or_null("/root/Main/InventoryManager")
+		
+		if inventory_manager:
+			for drop in drops:
+				if drop.has("item_id"):
+					# Using new ID system
+					inventory_manager.add_item_by_id(drop.item_id, drop.amount)
+				elif drop.has("item"):
+					# Fallback for old system
+					inventory_manager.add_item_by_name(drop.item, drop.amount)
+		else:
+			print("WARNING: No inventory manager found to add drops to")
 		
 		# Emit signal so visual can be removed
 		resource_collected.emit(resource_data, drops)

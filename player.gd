@@ -30,9 +30,16 @@ func _ready():
 		print("Player: No TerrainManager found - terrain effects disabled")
 		use_terrain_effects = false
 		
+	# UPDATED: Check for inventory manager with new system
 	var inventory_manager = $InventoryManager
 	if inventory_manager:
 		print("Inventory system ready!")
+		print("Starting inventory:")
+		print("- Wood: ", inventory_manager.get_item_count_by_name("Wood"))
+		print("- Stone: ", inventory_manager.get_item_count_by_name("Stone")) 
+		print("- Axe: ", inventory_manager.get_item_count_by_name("Axe"))
+	else:
+		print("WARNING: No inventory manager found!")
 		
 	# Create visual collection range indicator
 	#create_collection_range_indicator()
@@ -231,6 +238,10 @@ func _input(event):
 	if event is InputEventKey and event.pressed and event.keycode == KEY_U:
 		if terrain_manager:
 			terrain_manager.force_full_resync()
+			
+	# Press G to debug inventory system (ADD THIS)
+	if event is InputEventKey and event.pressed and event.keycode == KEY_G:
+		debug_inventory_system()
 
 func debug_resource_collection():
 	"""Debug what resources are nearby and why collection might fail"""
@@ -273,6 +284,37 @@ func debug_terrain_resources():
 		var res = terrain_manager.spawned_resources[i]
 		var distance = global_position.distance_to(res.world_pos)
 		print(i, ": ", res.type, " at ", res.world_pos, " (", "%.2f" % distance, "m away)")
+		
+func debug_inventory_system():
+	"""Debug the new inventory system"""
+	var inventory_manager = $InventoryManager
+	if not inventory_manager:
+		print("No inventory manager!")
+		return
+	
+	print("\n=== INVENTORY DEBUG ===")
+	print("Using ItemDatabase system")
+	
+	# Test adding items by ID
+	print("Testing add_item_by_id...")
+	inventory_manager.add_item_by_id(1, 5)  # 5 Wood
+	inventory_manager.add_item_by_id(2, 3)  # 3 Stone
+	
+	# Test adding items by name
+	print("Testing add_item_by_name...")
+	inventory_manager.add_item_by_name("Iron", 2)  # 2 Iron
+	
+	# Show current counts
+	print("Current inventory:")
+	print("- Wood (ID 1): ", inventory_manager.get_item_count_by_id(1))
+	print("- Stone (ID 2): ", inventory_manager.get_item_count_by_id(2))
+	print("- Iron (ID 3): ", inventory_manager.get_item_count_by_id(3))
+	
+	# Test database queries
+	print("Database info:")
+	var wood_data = ItemDatabase.get_item_by_id(1)
+	print("- Wood max stack: ", wood_data.get("stack_size", "unknown"))
+	print("- Wood type: ", wood_data.get("type", "unknown"))
 
 func toggle_terrain_debug():
 	"""Toggle terrain debug info"""
@@ -323,22 +365,23 @@ func get_movement_cost_to_position(target_pos: Vector3) -> float:
 # ============================================================================
 
 func try_interact_with_resources():
-	"""Try to interact with nearby resources"""
+	"""Try to interact with nearby resources - SIMPLIFIED"""
 	if not terrain_manager:
 		return
 	
-	var nearby_resources = terrain_manager.get_resources_near_position(global_position, 2.0)
+	var nearby_resources = terrain_manager.get_resources_near_position(global_position, 3.0)
 	
 	if nearby_resources.size() > 0:
 		print("Resources in interaction range:")
 		for resource in nearby_resources:
 			var distance = global_position.distance_to(resource.world_pos)
-			print("  - ", resource.type, " (", distance, "m away)")
+			print("  - ", resource.type, " (", "%.2f" % distance, "m away)")
+		print("Press E to collect closest resource")
 	else:
 		print("No resources nearby")
 		
 func try_gather_resource():
-	"""Gather resources when pressing E - FIXED VERSION"""
+	"""Gather resources when pressing E - UPDATED FOR NEW ITEM SYSTEM"""
 	if not terrain_manager:
 		print("No terrain manager - can't collect resources")
 		return
@@ -381,24 +424,28 @@ func try_gather_resource():
 	
 	print("Collecting closest resource: ", closest.type, " at ", "%.2f" % collectible_resources[0].distance, "m")
 	
-	# Collect it
+	# Collect it - this now automatically adds to inventory!
 	var drops = terrain_manager.collect_resource(closest)
 	
-	# Add to inventory
-	var total_items_added = 0
-	var items_collected = []
-	
-	for drop in drops:
-		if $InventoryManager.add_item(drop.item, "resource", drop.amount):
-			total_items_added += drop.amount
-			items_collected.append(str(drop.amount) + " " + drop.item)
-		else:
-			print("Inventory full - couldn't collect ", drop.item)
-	
-	if total_items_added > 0:
+	# Display what we collected (terrain manager already added it to inventory)
+	if drops.size() > 0:
+		var items_collected = []
+		for drop in drops:
+			var item_name = "Unknown"
+			
+			# Get item name from database
+			if drop.has("item_id"):
+				var item_data = ItemDatabase.get_item_by_id(drop.item_id)
+				item_name = item_data.get("name", "Unknown Item")
+			elif drop.has("item"):
+				# Fallback for old system
+				item_name = drop.item
+			
+			items_collected.append(str(drop.amount) + " " + item_name)
+		
 		print("✓ Successfully collected: ", ", ".join(items_collected))
 	else:
-		print("✗ Failed to collect anything")
+		print("✗ Resource had no drops")
 
 func apply_environmental_damage():
 	"""Apply environmental effects like drowning, cold, etc."""

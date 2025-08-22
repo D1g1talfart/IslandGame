@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://cy6u1uepcxvpa"]
 
 [ext_resource type="Script" uid="uid://52pmj2sa5ymc" path="res://loading_screen.gd" id="1_mggpi"]
-[ext_resource type="Script" uid="uid://dxptq5a6b0nm4" path="res://IslandGenerator.gd" id="2_htrc2"]
+[ext_resource type="Script" uid="uid://sdp8p37dln6m" path="res://IslandGenerator.gd" id="2_htrc2"]
 
 [node name="LoadingScreen" type="Control" node_paths=PackedStringArray("progress_bar", "status_label")]
 layout_mode = 3

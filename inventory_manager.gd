@@ -1,52 +1,82 @@
 class_name InventoryManager
 extends Node
 
-# Inventory setup
+# Inventory setup - unchanged
 const TOTAL_SLOTS = 40
 const HOTBAR_SLOTS = 10
 var items: Array[InventoryItem] = []
 var selected_hotbar_slot: int = 0
 
-# Item data structure
+# UPDATED: Enhanced InventoryItem class that uses the database
 class InventoryItem:
-	var name: String
-	var type: String  # "resource", "tool", "seed", etc.
-	var stack_size: int
-	var icon: Texture2D
+	var item_id: int
+	var count: int
 	var metadata: Dictionary = {}  # For tool durability, etc.
 	
-	func _init(item_name: String, item_type: String, max_stack: int = 99):
-		name = item_name
-		type = item_type
-		stack_size = max_stack
+	# Cache frequently accessed data
+	var _cached_data: Dictionary = {}
+	
+	func _init(id: int, amount: int = 1):
+		item_id = id
+		count = amount
+		_cached_data = ItemDatabase.get_item_by_id(item_id)
+	
+	# Convenient property accessors
+	func get_name() -> String:
+		return _cached_data.get("name", "Unknown")
+	
+	func get_type() -> String:
+		return _cached_data.get("type", "misc")
+	
+	func get_max_stack_size() -> int:
+		return _cached_data.get("stack_size", 1)
+	
+	func get_icon_path() -> String:
+		return _cached_data.get("icon_path", "")
+	
+	func can_stack_with(other_id: int) -> bool:
+		return item_id == other_id and count < get_max_stack_size()
+	
+	func add_to_stack(amount: int) -> int:
+		var max_stack = get_max_stack_size()
+		var can_add = min(amount, max_stack - count)
+		count += can_add
+		return amount - can_add  # Return leftover
+	
+	# Add this to your InventoryItem class in inventory_manager.gd
+	func get_icon() -> Texture2D:
+		return ItemDatabase.get_item_icon(item_id)
 
 signal inventory_changed
 signal hotbar_changed(slot: int)
 
 func _ready():
+	add_to_group("inventory_manager")  # ADD THIS LINE
 	# Initialize empty inventory
 	items.resize(TOTAL_SLOTS)
 	
-	# Debug: Add some starting items
-	add_item("Wood", "resource", 99)
-	add_item("Stone", "resource", 5)
-	add_item("Axe", "tool", 1)
+	# Debug: Add some starting items using IDs
+	add_item_by_id(1, 15)  # 15 Wood
+	add_item_by_id(2, 5)   # 5 Stone  
+	add_item_by_id(10, 1)  # 1 Axe
 	
-func add_item(item_name: String, item_type: String, amount: int = 1) -> bool:
-	print("Adding ", amount, " ", item_name)
+# UPDATED: Add item by ID (primary method)
+func add_item_by_id(item_id: int, amount: int = 1) -> bool:
+	if not ItemDatabase.has_item_id(item_id):
+		print("ERROR: Unknown item ID: ", item_id)
+		return false
+	
+	var item_name = ItemDatabase.get_item_name_by_id(item_id)
+	print("Adding ", amount, " ", item_name, " (ID: ", item_id, ")")
 	
 	# Try to stack with existing items first
 	for i in range(TOTAL_SLOTS):
-		if items[i] != null and items[i].name == item_name:
-			var space_left = items[i].stack_size - items[i].metadata.get("count", 1)
-			if space_left > 0:
-				var add_amount = min(amount, space_left)
-				items[i].metadata["count"] = items[i].metadata.get("count", 1) + add_amount
-				amount -= add_amount
+		if items[i] != null and items[i].item_id == item_id:
+			var leftover = items[i].add_to_stack(amount)
+			amount = leftover
+			if amount <= 0:
 				inventory_changed.emit()
-				
-				if amount <= 0:
-					return true
+				return true
 	
 	# Create new stacks for remaining items
 	while amount > 0:
@@ -55,27 +85,39 @@ func add_item(item_name: String, item_type: String, amount: int = 1) -> bool:
 			print("Inventory full!")
 			return false
 		
-		var new_item = InventoryItem.new(item_name, item_type)
-		var stack_amount = min(amount, 99)  # Max stack size
-		new_item.metadata["count"] = stack_amount
-		items[empty_slot] = new_item
+		var item_data = ItemDatabase.get_item_by_id(item_id)
+		var max_stack = item_data.get("stack_size", 1)
+		var stack_amount = min(amount, max_stack)
+		
+		items[empty_slot] = InventoryItem.new(item_id, stack_amount)
 		amount -= stack_amount
 		
 	inventory_changed.emit()
 	return true
 
-func remove_item(item_name: String, amount: int = 1) -> bool:
+# UPDATED: Add item by name (convenience method)  
+func add_item_by_name(item_name: String, amount: int = 1) -> bool:
+	var item_id = ItemDatabase.get_item_id_by_name(item_name)
+	if item_id == -1:
+		print("ERROR: Unknown item name: ", item_name)
+		return false
+	return add_item_by_id(item_id, amount)
+
+# LEGACY: Keep your old add_item method for backward compatibility
+func add_item(item_name: String, item_type: String, amount: int = 1) -> bool:
+	return add_item_by_name(item_name, amount)
+
+# UPDATED: Remove item methods
+func remove_item_by_id(item_id: int, amount: int = 1) -> bool:
 	var removed = 0
 	
 	for i in range(TOTAL_SLOTS):
-		if items[i] != null and items[i].name == item_name:
-			var current_count = items[i].metadata.get("count", 1)
-			var remove_amount = min(amount - removed, current_count)
-			
-			items[i].metadata["count"] = current_count - remove_amount
+		if items[i] != null and items[i].item_id == item_id:
+			var remove_amount = min(amount - removed, items[i].count)
+			items[i].count -= remove_amount
 			removed += remove_amount
 			
-			if items[i].metadata["count"] <= 0:
+			if items[i].count <= 0:
 				items[i] = null
 			
 			if removed >= amount:
@@ -86,13 +128,35 @@ func remove_item(item_name: String, amount: int = 1) -> bool:
 	
 	return removed >= amount
 
-func get_item_count(item_name: String) -> int:
+func remove_item_by_name(item_name: String, amount: int = 1) -> bool:
+	var item_id = ItemDatabase.get_item_id_by_name(item_name)
+	if item_id == -1:
+		return false
+	return remove_item_by_id(item_id, amount)
+
+# LEGACY: Keep old remove_item method
+func remove_item(item_name: String, amount: int = 1) -> bool:
+	return remove_item_by_name(item_name, amount)
+
+# UPDATED: Get item count methods
+func get_item_count_by_id(item_id: int) -> int:
 	var total = 0
 	for item in items:
-		if item != null and item.name == item_name:
-			total += item.metadata.get("count", 1)
+		if item != null and item.item_id == item_id:
+			total += item.count
 	return total
 
+func get_item_count_by_name(item_name: String) -> int:
+	var item_id = ItemDatabase.get_item_id_by_name(item_name)
+	if item_id == -1:
+		return 0
+	return get_item_count_by_id(item_id)
+
+# LEGACY: Keep old get_item_count method
+func get_item_count(item_name: String) -> int:
+	return get_item_count_by_name(item_name)
+
+# Rest of your methods stay the same!
 func find_empty_slot() -> int:
 	for i in range(TOTAL_SLOTS):
 		if items[i] == null:
@@ -113,10 +177,8 @@ func select_hotbar_slot(slot: int):
 		hotbar_changed.emit(slot)
 		print("Selected hotbar slot: ", slot)
 
-# Handle number key inputs for hotbar
 func _input(event):
 	if event is InputEventKey and event.pressed:
-		# Number keys 1-9, 0 for slots 0-8, 9
 		if event.keycode >= KEY_1 and event.keycode <= KEY_9:
 			select_hotbar_slot(event.keycode - KEY_1)
 		elif event.keycode == KEY_0:
