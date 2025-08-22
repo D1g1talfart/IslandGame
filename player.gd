@@ -35,7 +35,7 @@ func _ready():
 		print("Inventory system ready!")
 		
 	# Create visual collection range indicator
-	create_collection_range_indicator()
+	#create_collection_range_indicator()
 
 func create_collection_range_indicator():
 	var indicator = MeshInstance3D.new()

@@ -65,7 +65,7 @@ alignment = 1
 [node name="Title" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_jix8l")
-text = "CUNT: Go Fuck Yourself 3"
+text = "Animal Droppings"
 horizontal_alignment = 1
 vertical_alignment = 1
 

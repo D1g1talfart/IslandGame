@@ -26,9 +26,9 @@ signal island_rendered
 @export var corner_extension_multiplier: float = 1.2
 
 @export_group("Water Settings")
-@export var water_surface_offset: float = -0.05  # Water surface height (less offset than bed)
+@export var water_surface_offset: float = -0.1  # Water surface height (less offset than bed)
 @export var water_bed_offset: float = -0.5      # Water bed height (current water_level_offset)
-@export var water_surface_alpha: float = 0.7    # Transparency of water surface
+@export var water_surface_alpha: float = 0.8    # Transparency of water surface
 
 # ============================================================================
 # RENDERING DATA
@@ -559,12 +559,175 @@ func create_land_cliff_mesh(terrain_level: int, cliff_faces: Array):
 	mesh_instances.append(mesh_instance)
 
 func create_water_cliff_mesh(terrain_type: int, cliff_faces: Array):
-	"""RESTORED: Create water cliff mesh (waterfalls) using water materials"""
+	"""UPGRADED: Create water cliff mesh with separate bed and surface layers"""
 	if cliff_faces.size() == 0:
 		return
 	
+	# Create TWO meshes - bed and surface (just like horizontal water)
+	create_water_cliff_bed_mesh(terrain_type, cliff_faces)
+	create_water_cliff_surface_mesh(terrain_type, cliff_faces)
+
+func create_water_cliff_bed_mesh(terrain_type: int, cliff_faces: Array):
+	"""Create waterfall bed with corner edge adjustments"""
 	var mesh_instance = MeshInstance3D.new()
-	mesh_instance.name = "WaterCliffs_" + str(terrain_type)
+	mesh_instance.name = "WaterCliffBed_" + str(terrain_type)
+	
+	var array_mesh = ArrayMesh.new()
+	var vertices = PackedVector3Array()
+	var normals = PackedVector3Array()
+	var uvs = PackedVector2Array()
+	var indices = PackedInt32Array()
+	
+	var vertex_index = 0
+	
+	# Group cliff faces by tile position to detect corners
+	var faces_by_tile = {}
+	for cliff_data in cliff_faces:
+		var tile_pos = Vector2i(int(cliff_data.world_pos.x / tile_size), int(cliff_data.world_pos.z / tile_size))
+		if tile_pos not in faces_by_tile:
+			faces_by_tile[tile_pos] = []
+		faces_by_tile[tile_pos].append(cliff_data)
+	
+	for tile_pos in faces_by_tile.keys():
+		var tile_faces = faces_by_tile[tile_pos]
+		
+		# Calculate the exact height of the horizontal water bed at this position
+		var horizontal_bed_height = get_water_bed_height(tile_pos)
+		
+		for cliff_data in tile_faces:
+			# Start the waterfall bed at exactly that height
+			var bed_world_pos = Vector3(cliff_data.world_pos.x, horizontal_bed_height, cliff_data.world_pos.z)
+			
+			# Offset slightly inward to prevent clipping with surface
+			var inward_offset = cliff_data.normal * -0.05
+			bed_world_pos += inward_offset
+			
+			# Calculate height difference from bed level to neighbor's bed level
+			var height_diff = cliff_data.height_diff + (cliff_data.world_pos.y - horizontal_bed_height)
+			
+			# Check if this face shares corners with other faces on the same tile
+			var edge_adjustments = calculate_corner_adjustments(cliff_data, tile_faces)
+			
+			vertex_index = add_waterfall_bed_wall(
+				vertices, normals, uvs, indices,
+				bed_world_pos,
+				cliff_data.edge_start,
+				cliff_data.edge_end,
+				cliff_data.normal,
+				height_diff,
+				edge_adjustments,
+				vertex_index
+			)
+	
+	var arrays = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	
+	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh_instance.mesh = array_mesh
+	
+	# Use BED material
+	var bed_material_key = "bed_" + str(terrain_type)
+	if bed_material_key in materials:
+		mesh_instance.material_override = materials[bed_material_key]
+	
+	if create_collision:
+		mesh_instance.create_trimesh_collision()
+	
+	add_child(mesh_instance)
+	mesh_instances.append(mesh_instance)
+
+func calculate_corner_adjustments(current_face, all_tile_faces: Array) -> Dictionary:
+	"""Calculate how much to trim edge endpoints to stop at corner point"""
+	var adjustments = {"start_trim": 0.0, "end_trim": 0.0}
+	var trim_amount = 0.05
+	
+	# Check if other faces share the same corner points
+	for other_face in all_tile_faces:
+		if other_face == current_face:
+			continue
+		
+		var current_start = current_face.edge_start
+		var current_end = current_face.edge_end
+		var other_start = other_face.edge_start
+		var other_end = other_face.edge_end
+		
+		var tolerance = 0.01
+		
+		# If my start point matches a corner, trim it back
+		if current_start.distance_to(other_start) < tolerance or current_start.distance_to(other_end) < tolerance:
+			adjustments.start_trim = trim_amount
+		
+		# If my end point matches a corner, trim it back
+		if current_end.distance_to(other_start) < tolerance or current_end.distance_to(other_end) < tolerance:
+			adjustments.end_trim = trim_amount
+	
+	return adjustments
+
+func add_waterfall_bed_wall(vertices: PackedVector3Array, normals: PackedVector3Array, uvs: PackedVector2Array, indices: PackedInt32Array, world_pos: Vector3, edge_start: Vector3, edge_end: Vector3, face_normal: Vector3, height_diff: float, edge_adjustments: Dictionary, vertex_index: int) -> int:
+	"""Add waterfall bed wall with trimmed edges to prevent corner overlap"""
+	
+	# Calculate the edge direction and trim the endpoints
+	var edge_vector = edge_end - edge_start
+	var edge_length = edge_vector.length()
+	var edge_direction = edge_vector.normalized()
+	
+	# Trim from start if needed
+	var start_trim = edge_adjustments.start_trim
+	var trimmed_start = edge_start + edge_direction * start_trim
+	
+	# Trim from end if needed  
+	var end_trim = edge_adjustments.end_trim
+	var trimmed_end = edge_end - edge_direction * end_trim
+	
+	# Make sure we don't over-trim and create invalid geometry
+	var remaining_length = edge_length - start_trim - end_trim
+	if remaining_length <= 0.01:
+		# Skip this face if it would be too small
+		return vertex_index
+	
+	var top_start = world_pos + trimmed_start
+	var top_end = world_pos + trimmed_end
+	var bottom_start = top_start - Vector3(0, height_diff, 0)
+	var bottom_end = top_end - Vector3(0, height_diff, 0)
+	
+	# Add vertices
+	vertices.append(bottom_start)
+	vertices.append(bottom_end)
+	vertices.append(top_end)
+	vertices.append(top_start)
+	
+	# Add normals
+	for i in range(4):
+		normals.append(face_normal)
+	
+	# Adjust UVs based on trimming to maintain texture consistency
+	var start_uv = start_trim / edge_length
+	var end_uv = 1.0 - (end_trim / edge_length)
+	
+	uvs.append(Vector2(start_uv, 0))
+	uvs.append(Vector2(end_uv, 0))
+	uvs.append(Vector2(end_uv, 1))
+	uvs.append(Vector2(start_uv, 1))
+	
+	# Add triangles
+	indices.append(vertex_index)
+	indices.append(vertex_index + 1)
+	indices.append(vertex_index + 2)
+	
+	indices.append(vertex_index)
+	indices.append(vertex_index + 2)
+	indices.append(vertex_index + 3)
+	
+	return vertex_index + 4
+
+func create_water_cliff_surface_mesh(terrain_type: int, cliff_faces: Array):
+	"""Create waterfall surface - starts at surface level"""
+	var mesh_instance = MeshInstance3D.new()
+	mesh_instance.name = "WaterCliffSurface_" + str(terrain_type)
 	
 	var array_mesh = ArrayMesh.new()
 	var vertices = PackedVector3Array()
@@ -575,13 +738,18 @@ func create_water_cliff_mesh(terrain_type: int, cliff_faces: Array):
 	var vertex_index = 0
 	
 	for cliff_data in cliff_faces:
+		# cliff_data.world_pos.y is already at the correct water surface level
+		# Offset slightly outward to prevent clipping with bed
+		var outward_offset = cliff_data.normal * 0.00
+		var surface_world_pos = cliff_data.world_pos + outward_offset
+		
 		vertex_index = add_vertical_wall(
 			vertices, normals, uvs, indices,
-			cliff_data.world_pos,
+			surface_world_pos,
 			cliff_data.edge_start,
 			cliff_data.edge_end,
 			cliff_data.normal,
-			cliff_data.height_diff,
+			cliff_data.height_diff, # Use original height difference for surface
 			vertex_index
 		)
 	
@@ -595,24 +763,18 @@ func create_water_cliff_mesh(terrain_type: int, cliff_faces: Array):
 	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	mesh_instance.mesh = array_mesh
 	
-	# Keep water materials for beautiful blue waterfalls!
-	if terrain_type in materials:
-		mesh_instance.material_override = materials[terrain_type]
+	# Use SURFACE material
+	var surface_material_key = "surface_" + str(terrain_type)
+	if surface_material_key in materials:
+		mesh_instance.material_override = materials[surface_material_key]
 	
-	if show_wireframe:
-		var wireframe_material = materials[terrain_type].duplicate()
-		wireframe_material.flags_unshaded = true
-		wireframe_material.wireframe = true
-		mesh_instance.material_override = wireframe_material
-		
-	if create_collision:
-		mesh_instance.create_trimesh_collision()
+	# NO collision for surface
 	
 	add_child(mesh_instance)
 	mesh_instances.append(mesh_instance)
 	
 func create_water_bed_mesh(terrain_type: int, tiles: Array):
-	"""Create water bed mesh (sandy bottom with collision)"""
+	"""Create water bed mesh with waterfall edge adjustments"""
 	if tiles.size() == 0:
 		return
 	
@@ -632,7 +794,8 @@ func create_water_bed_mesh(terrain_type: int, tiles: Array):
 		var height = get_water_bed_height(pos)
 		var world_pos = Vector3(pos.x * tile_size, height, pos.y * tile_size)
 		
-		vertex_index = add_horizontal_face(vertices, normals, uvs, indices, world_pos, vertex_index, true)
+		# Check if this tile needs edge adjustments for waterfall connections
+		vertex_index = add_waterfall_aware_bed_face(vertices, normals, uvs, indices, world_pos, pos, vertex_index)
 	
 	var arrays = []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -655,6 +818,100 @@ func create_water_bed_mesh(terrain_type: int, tiles: Array):
 	
 	add_child(mesh_instance)
 	mesh_instances.append(mesh_instance)
+	
+func add_waterfall_aware_bed_face(vertices: PackedVector3Array, normals: PackedVector3Array, uvs: PackedVector2Array, indices: PackedInt32Array, world_pos: Vector3, tile_pos: Vector2i, vertex_index: int) -> int:
+	"""Add water bed face with clipping/extending for waterfall connections"""
+	
+	var full_size = tile_size / 2.0
+	var adjustment = 0.05  # How much to clip/extend
+	
+	# Define corner positions - MATCHING add_horizontal_face order!
+	var nw = Vector3(-full_size, 0, -full_size)  # Northwest
+	var ne = Vector3(full_size, 0, -full_size)   # Northeast  
+	var se = Vector3(full_size, 0, full_size)    # Southeast
+	var sw = Vector3(-full_size, 0, full_size)   # Southwest
+	
+	# Check each cardinal direction for height differences
+	var directions = [
+		{"offset": Vector2i(0, -1), "name": "north"},
+		{"offset": Vector2i(1, 0),  "name": "east"},
+		{"offset": Vector2i(0, 1),  "name": "south"},
+		{"offset": Vector2i(-1, 0), "name": "west"}
+	]
+	
+	for dir in directions:
+		var neighbor_pos = tile_pos + dir.offset
+		
+		# Check bounds
+		if neighbor_pos.y >= 0 and neighbor_pos.y < current_island_data.terrain_data.size() and \
+		   neighbor_pos.x >= 0 and neighbor_pos.x < current_island_data.terrain_data[neighbor_pos.y].size():
+			
+			var neighbor_terrain = current_island_data.terrain_data[neighbor_pos.y][neighbor_pos.x]
+			var my_height = world_pos.y
+			var neighbor_height: float
+			
+			# Get neighbor height - UPDATED to include land terrain
+			if is_water_terrain(neighbor_terrain):
+				neighbor_height = get_water_bed_height(neighbor_pos)
+			else:
+				# Land terrain - use its terrain level height
+				neighbor_height = get_terrain_level_height(neighbor_terrain, neighbor_pos)
+			
+			var height_diff = my_height - neighbor_height
+			
+			# If neighbor is lower (I'm higher) - clip back my edge
+			if height_diff > 0.01:
+				match dir.name:
+					"north": 
+						ne.z += adjustment  # Pull NE corner south
+						nw.z += adjustment  # Pull NW corner south
+					"east":
+						ne.x -= adjustment  # Pull NE corner west
+						se.x -= adjustment  # Pull SE corner west
+					"south":
+						se.z -= adjustment  # Pull SE corner north
+						sw.z -= adjustment  # Pull SW corner north
+					"west":
+						nw.x += adjustment  # Pull NW corner east
+						sw.x += adjustment  # Pull SW corner east
+			
+			# If neighbor is higher (I'm lower) - extend my edge to meet it
+			elif height_diff < -0.01:
+				match dir.name:
+					"north":
+						ne.z -= adjustment  # Push NE corner north
+						nw.z -= adjustment  # Push NW corner north
+					"east":
+						ne.x += adjustment  # Push NE corner east
+						se.x += adjustment  # Push SE corner east
+					"south":
+						se.z += adjustment  # Push SE corner south
+						sw.z += adjustment  # Push SW corner south
+					"west":
+						nw.x -= adjustment  # Push NW corner west
+						sw.x -= adjustment  # Push SW corner west
+	
+	# Create vertices with SAME ORDER as add_horizontal_face: [NW, NE, SE, SW]
+	var quad_vertices = [nw, ne, se, sw]
+	
+	for vertex in quad_vertices:
+		vertices.append(world_pos + vertex)
+		normals.append(Vector3.UP)
+	
+	uvs.append(Vector2(0, 1))  # NW
+	uvs.append(Vector2(1, 1))  # NE
+	uvs.append(Vector2(1, 0))  # SE
+	uvs.append(Vector2(0, 0))  # SW
+	
+	# Add triangles with correct winding order
+	indices.append(vertex_index)      # NW
+	indices.append(vertex_index + 1)  # NE
+	indices.append(vertex_index + 2)  # SE
+	indices.append(vertex_index)      # NW
+	indices.append(vertex_index + 2)  # SE
+	indices.append(vertex_index + 3)  # SW
+	
+	return vertex_index + 4
 
 func create_water_surface_mesh(terrain_type: int, tiles: Array):
 	"""Create water surface mesh (transparent blue, no collision)"""
@@ -808,7 +1065,7 @@ func create_terrain_mesh(terrain_type: int, tiles: Array, is_water: bool = false
 	
 	for tile_data in tiles:
 		var pos = tile_data.position
-		var height = get_terrain_level_height(terrain_type, pos)  # RESTORED proper height!
+		var height = get_terrain_level_height(terrain_type, pos)
 		var world_pos = Vector3(pos.x * tile_size, height, pos.y * tile_size)
 		
 		# Create horizontal top face only (cliffs handled separately)
@@ -839,6 +1096,70 @@ func create_terrain_mesh(terrain_type: int, tiles: Array, is_water: bool = false
 	
 	add_child(mesh_instance)
 	mesh_instances.append(mesh_instance)
+	
+func add_clipped_horizontal_face(vertices: PackedVector3Array, normals: PackedVector3Array, uvs: PackedVector2Array, indices: PackedInt32Array, world_pos: Vector3, tile_pos: Vector2i, vertex_index: int) -> int:
+	"""Add horizontal face with careful water edge clipping"""
+	
+	var full_size = tile_size / 2.0
+	var clip_amount = 0.1
+	
+	# Default coordinates (no clipping)
+	var quad_coords = [-full_size, -full_size, full_size, -full_size, full_size, full_size, -full_size, full_size]
+	
+	# Only clip if we're land and neighbor is water AND we're higher
+	var directions = [
+		{"offset": Vector2i(0, -1), "name": "north", "coords": [1, 5]},  # North edge
+		{"offset": Vector2i(1, 0), "name": "east", "coords": [2, 4]},    # East edge  
+		{"offset": Vector2i(0, 1), "name": "south", "coords": [3, 7]},   # South edge
+		{"offset": Vector2i(-1, 0), "name": "west", "coords": [0, 6]}    # West edge
+	]
+	
+	for dir in directions:
+		var neighbor_pos = tile_pos + dir.offset
+		
+		# Check bounds
+		if neighbor_pos.y >= 0 and neighbor_pos.y < current_island_data.terrain_data.size() and \
+		   neighbor_pos.x >= 0 and neighbor_pos.x < current_island_data.terrain_data[neighbor_pos.y].size():
+			
+			var neighbor_terrain = current_island_data.terrain_data[neighbor_pos.y][neighbor_pos.x]
+			
+			# Only clip if: we're land, neighbor is water, and we're significantly higher
+			if is_water_terrain(neighbor_terrain):
+				var neighbor_height = get_water_bed_height(neighbor_pos)  # Use bed height for comparison
+				var height_diff = world_pos.y - neighbor_height
+				
+				if height_diff > 0.15:  # Only clip for significant height differences
+					match dir.name:
+						"north": quad_coords[1] -= clip_amount; quad_coords[5] -= clip_amount
+						"east":  quad_coords[2] -= clip_amount; quad_coords[4] -= clip_amount  
+						"south": quad_coords[3] += clip_amount; quad_coords[7] += clip_amount
+						"west":  quad_coords[0] += clip_amount; quad_coords[6] += clip_amount
+	
+	# Create vertices with adjusted coordinates
+	var quad_vertices = [
+		world_pos + Vector3(quad_coords[0], 0, quad_coords[1]),  # SW
+		world_pos + Vector3(quad_coords[2], 0, quad_coords[3]),  # SE
+		world_pos + Vector3(quad_coords[4], 0, quad_coords[5]),  # NE
+		world_pos + Vector3(quad_coords[6], 0, quad_coords[7])   # NW
+	]
+	
+	for vertex in quad_vertices:
+		vertices.append(vertex)
+		normals.append(Vector3.UP)
+	
+	uvs.append(Vector2(0, 0))
+	uvs.append(Vector2(1, 0))
+	uvs.append(Vector2(1, 1))
+	uvs.append(Vector2(0, 1))
+	
+	indices.append(vertex_index)
+	indices.append(vertex_index + 1)
+	indices.append(vertex_index + 2)
+	indices.append(vertex_index)
+	indices.append(vertex_index + 2)
+	indices.append(vertex_index + 3)
+	
+	return vertex_index + 4
 
 func add_horizontal_face(vertices: PackedVector3Array, normals: PackedVector3Array, uvs: PackedVector2Array, indices: PackedInt32Array, world_pos: Vector3, vertex_index: int, face_up: bool = true) -> int:
 	"""RESTORED: Add horizontal quad face"""
@@ -1225,6 +1546,7 @@ func add_corner_triangle(vertices: PackedVector3Array, normals: PackedVector3Arr
 	indices.append(vertex_index + 2)
 	
 	return vertex_index + 3
+	
 
 # ============================================================================
 # YOUR EXISTING PUBLIC INTERFACE (keeping unchanged)
