@@ -16,7 +16,7 @@ signal resource_collected(resource_type: String, world_pos: Vector3)
 @export_group("Visual Settings")
 @export var resource_scale: float = 1.0
 @export var add_collision: bool = true
-@export var show_debug_names: bool = false
+@export var show_debug_names: bool = true
 
 # ============================================================================
 # CORE DATA
@@ -111,8 +111,9 @@ func setup_resource_visuals():
 	resource_meshes["stone_medium"] = create_rock_mesh(0.6)
 	
 	# Special resources
-	resource_meshes["crystal_node"] = create_crystal_mesh()  # Now bigger!
-	resource_meshes["berry_bush"] = create_bush_mesh()
+	resource_meshes["crystal_node"] = create_crystal_mesh()
+	# BERRY BUSH NOW LOADS FROM GLB MODEL
+	load_berry_bush_model()  # New function!
 	
 	# Beach resources
 	resource_meshes["driftwood"] = create_log_mesh()
@@ -122,17 +123,36 @@ func setup_resource_visuals():
 	resource_meshes["water_lily"] = create_lily_mesh()
 	resource_meshes["reed"] = create_reed_mesh()
 	
-	# Materials
-	resource_materials["trunk"] = create_trunk_material()  # NEW!
-	resource_materials["tree_crown"] = create_tree_material()  # Renamed
+	# Materials (keep existing materials for now)
+	resource_materials["trunk"] = create_trunk_material()
+	resource_materials["tree_crown"] = create_tree_material()
 	resource_materials["pine"] = create_pine_material()
 	resource_materials["ancient_crown"] = create_ancient_tree_material()
 	resource_materials["stone"] = create_stone_material()
 	resource_materials["crystal"] = create_crystal_material()
-	resource_materials["berry"] = create_berry_material()
+	resource_materials["berry"] = create_berry_material()  # Keep this as backup
 	resource_materials["wood"] = create_wood_material()
 	resource_materials["shell"] = create_shell_material()
 	resource_materials["water_plant"] = create_water_plant_material()
+	
+	
+func load_berry_bush_model():
+	"""Load the berry bush GLB model instead of creating procedural mesh"""
+	var model_path = "res://Models/BerryBush.glb"
+	
+	# Try to load the GLB file
+	var berry_scene = load(model_path)
+	if not berry_scene:
+		print("ResourceSpawner: WARNING - Could not load berry bush model at: ", model_path)
+		print("ResourceSpawner: Falling back to procedural berry bush...")
+		# Fallback to procedural mesh
+		resource_meshes["berry_bush"] = create_bush_mesh()
+		return
+	
+	# Store the scene resource instead of a mesh
+	# We'll instantiate it when needed
+	resource_meshes["berry_bush"] = berry_scene
+	print("ResourceSpawner: Successfully loaded berry bush model!")
 
 # ============================================================================
 # MESH CREATORS
@@ -499,7 +519,7 @@ func create_all_existing_resource_visuals():
 	print("ResourceSpawner: Created ", resource_count, " resource visuals")
 
 func create_resource_visual(resource_type: String, world_pos: Vector3):
-	"""Create a single resource visual - FIXED VERSION"""
+	"""Create a single resource visual - FIXED positioning for GLB models"""
 	
 	# Handle composite trees (trunk + crown)
 	if resource_type in ["small_tree", "oak_tree", "ancient_tree"]:
@@ -511,38 +531,80 @@ func create_resource_visual(resource_type: String, world_pos: Vector3):
 		print("ResourceSpawner: Unknown resource type: ", resource_type)
 		return
 	
-	var mesh_instance = MeshInstance3D.new()
-	mesh_instance.name = resource_type + "_" + str(spawned_visual_resources.size())
-	mesh_instance.position = world_pos
+	var visual_node: Node3D
 	
-	# Set mesh
-	mesh_instance.mesh = resource_meshes[resource_type]
-	
-	# Set material based on type
-	var material_key = get_material_key_for_resource(resource_type)
-	if material_key in resource_materials:
-		mesh_instance.material_override = resource_materials[material_key]
-	
-	# Scale
-	mesh_instance.scale = Vector3.ONE * resource_scale
+	# SPECIAL HANDLING FOR GLB MODELS
+	if resource_type == "berry_bush" and resource_meshes[resource_type] is PackedScene:
+		# This is a GLB model - instantiate the scene
+		var model_instance = resource_meshes[resource_type].instantiate()
+		
+		# Create a wrapper node for proper positioning
+		visual_node = Node3D.new()
+		visual_node.name = resource_type + "_" + str(spawned_visual_resources.size())
+		visual_node.position = world_pos
+		visual_node.scale = Vector3.ONE * resource_scale
+		
+		# Add the model as a child and center it
+		visual_node.add_child(model_instance)
+		center_glb_model(model_instance, resource_type)
+		
+	else:
+		# STANDARD MESH HANDLING
+		var mesh_instance = MeshInstance3D.new()
+		mesh_instance.name = resource_type + "_" + str(spawned_visual_resources.size())
+		mesh_instance.position = world_pos
+		
+		# Set mesh
+		mesh_instance.mesh = resource_meshes[resource_type]
+		
+		# Set material based on type (only for procedural meshes)
+		var material_key = get_material_key_for_resource(resource_type)
+		if material_key in resource_materials:
+			mesh_instance.material_override = resource_materials[material_key]
+		
+		# Scale
+		mesh_instance.scale = Vector3.ONE * resource_scale
+		
+		visual_node = mesh_instance
 	
 	# Special positioning for some resources
-	apply_special_positioning(mesh_instance, resource_type)
+	apply_special_positioning(visual_node, resource_type)
 	
 	# Add collision for interaction
 	if add_collision:
-		add_resource_collision(mesh_instance, resource_type, world_pos)
+		add_resource_collision(visual_node, resource_type, world_pos)
 	
 	# Debug label
 	if show_debug_names:
-		add_debug_label(mesh_instance, resource_type)
+		add_debug_label(visual_node, resource_type)
 	
-	add_child(mesh_instance)
+	add_child(visual_node)
 	spawned_visual_resources.append({
 		"type": resource_type,
 		"world_pos": world_pos,
-		"visual_node": mesh_instance
+		"visual_node": visual_node
 	})
+	
+func center_glb_model(model_instance: Node3D, resource_type: String):
+	"""Manually offset GLB models - QUICK FIX VERSION"""
+	match resource_type:
+		"berry_bush":
+			# Position offset
+			model_instance.position = Vector3(-9, 0, 0)
+			# Make it 50% bigger
+			model_instance.scale = Vector3.ONE * 1.5
+			print("ResourceSpawner: Applied manual offset and 50% scale to berry bush")
+		_:
+			# No offset for other models
+			pass
+
+func find_mesh_instances_recursive(node: Node, mesh_instances: Array):
+	"""Recursively find all MeshInstance3D nodes"""
+	if node is MeshInstance3D:
+		mesh_instances.append(node)
+	
+	for child in node.get_children():
+		find_mesh_instances_recursive(child, mesh_instances)
 	
 func create_composite_tree_visual(tree_type: String, world_pos: Vector3):
 	"""Create trees with separate trunk and crown"""
@@ -588,19 +650,25 @@ func create_composite_tree_visual(tree_type: String, world_pos: Vector3):
 		"visual_node": tree_parent
 	})
 
-func apply_special_positioning(mesh_instance: MeshInstance3D, resource_type: String):
-	"""Apply special positioning for certain resource types"""
+func apply_special_positioning(visual_node: Node3D, resource_type: String):
+	"""Apply special positioning for certain resource types - UPDATED for GLB support"""
 	match resource_type:
 		"driftwood":
-			mesh_instance.rotation_degrees.y = randf_range(0, 360)
-			mesh_instance.rotation_degrees.z = randf_range(-15, 15)
+			visual_node.rotation_degrees.y = randf_range(0, 360)
+			visual_node.rotation_degrees.z = randf_range(-15, 15)
 		"seashell":
-			mesh_instance.rotation_degrees.y = randf_range(0, 360)
+			visual_node.rotation_degrees.y = randf_range(0, 360)
 		"crystal_node":
-			mesh_instance.rotation_degrees.y = randf_range(0, 360)
+			visual_node.rotation_degrees.y = randf_range(0, 360)
 			# Crystals can be slightly tilted for more natural look
-			mesh_instance.rotation_degrees.x = randf_range(-10, 70)
-			mesh_instance.rotation_degrees.z = randf_range(-10, 70)
+			visual_node.rotation_degrees.x = randf_range(-10, 70)
+			visual_node.rotation_degrees.z = randf_range(-10, 70)
+		"berry_bush":
+			# Add some random rotation for berry bushes too
+			visual_node.rotation_degrees.y = randf_range(0, 0)
+			# Maybe slight tilt for natural look
+			visual_node.rotation_degrees.x = randf_range(0, 0)
+			visual_node.rotation_degrees.z = randf_range(0, 0)
 
 func add_tree_collision(tree_node: Node3D, tree_type: String, world_pos: Vector3):
 	"""Add collision to composite tree - FIXED VERSION"""
@@ -630,22 +698,41 @@ func add_tree_collision(tree_node: Node3D, tree_type: String, world_pos: Vector3
 	static_body.set_meta("resource_type", tree_type)
 	static_body.set_meta("world_pos", world_pos)
 	
-func add_resource_collision(mesh_instance: MeshInstance3D, resource_type: String, world_pos: Vector3):
-	"""Add collision for single-mesh resources - FIXED VERSION"""
+func add_resource_collision(visual_node: Node3D, resource_type: String, world_pos: Vector3):
+	"""Add collision for resources - UPDATED to handle GLB models"""
+	
+	# For GLB models, check if they already have collision
+	if resource_type == "berry_bush" and visual_node.get_child_count() > 0:
+		# Look for existing StaticBody3D or RigidBody3D in the model
+		var existing_body = visual_node.find_child("*Body3D", true, false)
+		if existing_body:
+			print("ResourceSpawner: Berry bush model already has collision body")
+			# Add metadata to existing body
+			existing_body.add_to_group("resources")
+			existing_body.set_meta("resource_type", resource_type)
+			existing_body.set_meta("world_pos", world_pos)
+			return
+	
+	# Create collision shape (same as before)
 	var collision_shape = CollisionShape3D.new()
 	
 	# Custom collision shapes per resource type
 	match resource_type:
+		"berry_bush":
+			var shape = BoxShape3D.new()
+			shape.size = Vector3(0.5, 1.2, 0.5) * resource_scale
+			collision_shape.shape = shape
+		
 		"crystal_node":
 			var shape = BoxShape3D.new()
-			shape.size = Vector3(1.2, 3.6, 1.2) * resource_scale  # Tall crystal collision
+			shape.size = Vector3(1.2, 3.6, 1.2) * resource_scale
 			collision_shape.shape = shape
 		
 		"pine_tree":
-			var shape = BoxShape3D.new()  # Use box instead of cylinder
+			var shape = BoxShape3D.new()
 			shape.size = Vector3(0.8, 2.5, 0.8)
 			collision_shape.shape = shape
-			collision_shape.position.y = 1.25  # Center it
+			collision_shape.position.y = 1.25
 		
 		"stone_small":
 			var shape = SphereShape3D.new()
@@ -657,31 +744,26 @@ func add_resource_collision(mesh_instance: MeshInstance3D, resource_type: String
 			shape.radius = 0.6 * resource_scale
 			collision_shape.shape = shape
 		
-		"berry_bush":
-			var shape = SphereShape3D.new()
-			shape.radius = 0.4 * resource_scale
-			collision_shape.shape = shape
-		
 		"driftwood":
 			var shape = BoxShape3D.new()
-			shape.size = Vector3(0.8, 0.2, 0.2) * resource_scale  # Long and thin
+			shape.size = Vector3(0.8, 0.2, 0.2) * resource_scale
 			collision_shape.shape = shape
 		
 		"seashell":
 			var shape = BoxShape3D.new()
-			shape.size = Vector3(0.3, 0.1, 0.3) * resource_scale  # Flat and small
+			shape.size = Vector3(0.3, 0.1, 0.3) * resource_scale
 			collision_shape.shape = shape
 		
 		"water_lily":
 			var shape = BoxShape3D.new()
-			shape.size = Vector3(0.6, 0.04, 0.6) * resource_scale  # Very flat
+			shape.size = Vector3(0.6, 0.04, 0.6) * resource_scale
 			collision_shape.shape = shape
 		
 		"reed":
 			var shape = BoxShape3D.new()
-			shape.size = Vector3(0.1, 1.2, 0.1) * resource_scale  # Tall and thin
+			shape.size = Vector3(0.1, 1.2, 0.1) * resource_scale
 			collision_shape.shape = shape
-			collision_shape.position.y = 0.6  # Center it
+			collision_shape.position.y = 0.6
 		
 		_:
 			# Default collision
@@ -691,7 +773,7 @@ func add_resource_collision(mesh_instance: MeshInstance3D, resource_type: String
 	
 	var static_body = StaticBody3D.new()
 	static_body.add_child(collision_shape)
-	mesh_instance.add_child(static_body)
+	visual_node.add_child(static_body)
 	
 	# Add to interaction group
 	static_body.add_to_group("resources")
