@@ -20,6 +20,10 @@ config/icon="res://icon.svg"
 IslandDataStore="*res://IslandDataStore.gd"
 ItemDatabase="*res://ItemDatabase.gd"
 
+[display]
+
+window/stretch/mode="canvas_items"
+
 [input]
 
 ui_accept={

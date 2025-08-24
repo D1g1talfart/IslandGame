@@ -720,7 +720,7 @@ func add_resource_collision(visual_node: Node3D, resource_type: String, world_po
 	match resource_type:
 		"berry_bush":
 			var shape = BoxShape3D.new()
-			shape.size = Vector3(0.5, 1.2, 0.5) * resource_scale
+			shape.size = Vector3(0.3, 1.4, 0.5) * resource_scale
 			collision_shape.shape = shape
 		
 		"crystal_node":

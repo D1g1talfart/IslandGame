@@ -95,7 +95,8 @@ enum TerrainType {
 	LEVEL2_GRASS,
 	LEVEL2_DIRT,
 	LEVEL3_GRASS,
-	LEVEL3_DIRT
+	LEVEL3_DIRT,
+	SPAWN_PLAZA
 }
 
 enum WaterType {
@@ -111,12 +112,14 @@ class IslandData:
 	var beach_zones: Array = []
 	var river_mouths: Array = []
 	var deep_ponds: Array = []
+	var spawn_plaza_center: Vector2i
 	var island_width: int
 	var island_height: int
 	
 	func _init(w: int, h: int):
 		island_width = w
 		island_height = h
+		spawn_plaza_center = Vector2i(-1, -1)
 	
 	func is_valid() -> bool:
 		return terrain_data.size() > 0 and height_data.size() > 0
@@ -237,6 +240,10 @@ func generate_island_data():
 	
 	generation_progress.emit("Adding small ponds...", 0.95)
 	add_small_freshwater_ponds()
+	await get_tree().process_frame
+	
+	generation_progress.emit("Placing spawn plaza...", 0.98)
+	place_spawn_plaza()
 	await get_tree().process_frame
 	
 	generation_progress.emit("Finalizing island...", 1.0)
@@ -2221,6 +2228,195 @@ func calculate_pond_height_for_level(level: int) -> float:
 
 func is_valid_position(pos: Vector2i) -> bool:
 	return pos.x >= 0 and pos.x < island_width and pos.y >= 0 and pos.y < island_height
+	
+# ============================================================================
+# SPAWN PLAZA GENERATION
+# ============================================================================
+
+func place_spawn_plaza():
+	"""Place a 6x6 spawn plaza in the front-center of the island"""
+	print("Placing spawn plaza...")
+	
+	var plaza_pos = find_spawn_plaza_location()
+	
+	if plaza_pos == Vector2i(-1, -1):
+		print("Warning: Could not find suitable location for spawn plaza!")
+		print("Trying fallback locations...")
+		plaza_pos = find_fallback_plaza_location()
+		
+		if plaza_pos == Vector2i(-1, -1):
+			print("Error: No valid spawn plaza location found!")
+			return
+	
+	# Place the 6x6 plaza
+	for dy in range(6):  # <-- CHANGED FROM 4 TO 6
+		for dx in range(6):  # <-- CHANGED FROM 4 TO 6
+			var tile_pos = plaza_pos + Vector2i(dx, dy)
+			if is_valid_position(tile_pos):
+				current_island_data.terrain_data[tile_pos.y][tile_pos.x] = TerrainType.SPAWN_PLAZA
+				# Keep the existing height - plazas adapt to terrain level
+	
+	# STORE THE PLAZA CENTER POSITION
+	var plaza_center = plaza_pos + Vector2i(3, 3)  # Center of 6x6 area
+	current_island_data.spawn_plaza_center = plaza_center  # <-- ADD THIS
+	
+	print("Spawn plaza placed at: ", plaza_pos, " (6x6 area)")
+	print("Plaza center at: ", plaza_center)
+
+func find_spawn_plaza_location() -> Vector2i:
+	"""Find a suitable 4x4 location for the spawn plaza"""
+	
+	# Target the front-center area, back from the beach
+	var center_x = island_width / 2
+	var target_y_start = int(island_height * 0.6)  # Front 40% of island
+	var target_y_end = int(island_height * 0.7)    # But not too far south
+	
+	var search_radius = island_width / 4
+	
+	# Try positions in expanding search pattern from center
+	for radius in range(0, search_radius, 2):
+		var candidates = []
+		
+		# Create search pattern around center
+		for y in range(max(target_y_start, center_x - radius), min(target_y_end, center_x + radius + 1)):
+			for x_offset in range(-radius, radius + 1, 2):
+				var test_pos = Vector2i(center_x + x_offset, y)
+				
+				if can_place_plaza_at(test_pos):
+					var score = score_plaza_location(test_pos)
+					candidates.append({"pos": test_pos, "score": score})
+		
+		# Return best candidate from this radius
+		if candidates.size() > 0:
+			candidates.sort_custom(func(a, b): return a.score > b.score)
+			print("Found plaza location at radius ", radius, ": ", candidates[0].pos, " (score: ", candidates[0].score, ")")
+			return candidates[0].pos
+	
+	return Vector2i(-1, -1)
+
+func find_fallback_plaza_location() -> Vector2i:
+	"""Fallback search - try anywhere that's suitable"""
+	print("Searching entire island for plaza location...")
+	
+	var candidates = []
+	
+	# Search the entire island, but prefer center areas
+	for y in range(island_height - 6):  # <-- CHANGED FROM 4 TO 6
+		for x in range(island_width - 6):   # <-- CHANGED FROM 4 TO 6
+			var test_pos = Vector2i(x, y)
+			
+			if can_place_plaza_at(test_pos):
+				var score = score_plaza_location(test_pos) * 0.5  # Lower scores for fallback
+				candidates.append({"pos": test_pos, "score": score})
+	
+	if candidates.size() > 0:
+		candidates.sort_custom(func(a, b): return a.score > b.score)
+		print("Found fallback plaza location: ", candidates[0].pos)
+		return candidates[0].pos
+	
+	return Vector2i(-1, -1)
+
+func can_place_plaza_at(start_pos: Vector2i) -> bool:
+	"""Check if a 6x6 plaza can be placed at the given position"""
+	
+	# Check if all 6x6 tiles are valid grass/dirt
+	for dy in range(6):  # <-- CHANGED FROM 4 TO 6
+		for dx in range(6):  # <-- CHANGED FROM 4 TO 6
+			var check_pos = start_pos + Vector2i(dx, dy)
+			
+			# Must be within bounds
+			if not is_valid_position(check_pos):
+				return false
+			
+			var terrain = current_island_data.terrain_data[check_pos.y][check_pos.x]
+			
+			# Must be grass or dirt only
+			if terrain not in [
+				TerrainType.LEVEL0_GRASS, TerrainType.LEVEL0_DIRT,
+				TerrainType.LEVEL1_GRASS, TerrainType.LEVEL1_DIRT,
+				TerrainType.LEVEL2_GRASS, TerrainType.LEVEL2_DIRT,
+				TerrainType.LEVEL3_GRASS, TerrainType.LEVEL3_DIRT
+			]:
+				return false
+	
+	# Check buffer zone around plaza for water (8x8 area with 1-tile buffer)
+	for dy in range(-1, 7):  # <-- CHANGED FROM 5 TO 7
+		for dx in range(-1, 7):  # <-- CHANGED FROM 5 TO 7
+			var check_pos = start_pos + Vector2i(dx, dy)
+			
+			if not is_valid_position(check_pos):
+				continue
+			
+			var terrain = current_island_data.terrain_data[check_pos.y][check_pos.x]
+			
+			# No water allowed in buffer zone
+			if is_water_terrain_type(terrain):
+				return false
+	
+	return true
+
+func is_water_terrain_type(terrain_type: TerrainType) -> bool:
+	"""Check if terrain type is any kind of water"""
+	return terrain_type in [
+		TerrainType.DEEP_OCEAN,
+		TerrainType.SHALLOW_SALTWATER,
+		TerrainType.SHALLOW_FRESHWATER,
+		TerrainType.DEEP_FRESHWATER_POND,
+		TerrainType.RIVER,
+		TerrainType.RIVER_1,
+		TerrainType.RIVER_2,
+		TerrainType.RIVER_3,
+		TerrainType.RIVER_MOUTH
+	]
+
+func score_plaza_location(pos: Vector2i) -> float:
+	"""Score a potential plaza location (higher is better)"""
+	var score = 0.0
+	
+	# Prefer center horizontally
+	var center_x = island_width / 2.0
+	var x_distance_from_center = abs(pos.x - center_x)
+	score += (50.0 - x_distance_from_center) * 2.0
+	
+	# Prefer front area (higher Y values, but not too far south)
+	var ideal_y = island_height * 0.7
+	var y_distance_from_ideal = abs(pos.y - ideal_y)
+	score += (30.0 - y_distance_from_ideal) * 1.5
+	
+	# Check terrain consistency (prefer areas where all tiles are same level)
+	var terrain_levels = {}
+	var total_tiles = 0
+	
+	for dy in range(6):  # <-- CHANGED FROM 4 TO 6
+		for dx in range(6):  # <-- CHANGED FROM 4 TO 6
+			var check_pos = pos + Vector2i(dx, dy)
+			if is_valid_position(check_pos):
+				var height = current_island_data.height_data[check_pos.y][check_pos.x]
+				var level = get_elevation_level(height)
+				
+				if level in terrain_levels:
+					terrain_levels[level] += 1
+				else:
+					terrain_levels[level] = 1
+				total_tiles += 1
+	
+	# Bonus for terrain consistency
+	if terrain_levels.size() == 1:  # All same level
+		score += 20.0
+	elif terrain_levels.size() == 2:  # Mix of 2 levels
+		score += 5.0
+	
+	# Prefer level 0 or 1 (not too high up)
+	if 0 in terrain_levels:
+		score += terrain_levels[0] * 3.0
+	if 1 in terrain_levels:
+		score += terrain_levels[1] * 2.0
+	
+	# Slight penalty for being too close to edges
+	var edge_distance = min(min(pos.x, island_width - pos.x - 6), min(pos.y, island_height - pos.y - 6))  # <-- CHANGED FROM 4 TO 6
+	score += edge_distance * 0.5
+	
+	return score
 
 # ============================================================================
 # PRESET MANAGEMENT

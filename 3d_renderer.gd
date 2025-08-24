@@ -28,7 +28,7 @@ signal island_rendered
 @export_group("Water Settings")
 @export var water_surface_offset: float = -0.1  # Water surface height (less offset than bed)
 @export var water_bed_offset: float = -0.5      # Water bed height (current water_level_offset)
-@export var water_surface_alpha: float = 0.8    # Transparency of water surface
+@export var water_surface_alpha: float = 0.75    # Transparency of water surface
 
 # ============================================================================
 # RENDERING DATA
@@ -58,7 +58,8 @@ enum TerrainType {
 	LEVEL2_GRASS,
 	LEVEL2_DIRT,
 	LEVEL3_GRASS,
-	LEVEL3_DIRT
+	LEVEL3_DIRT,
+	SPAWN_PLAZA
 }
 
 # ============================================================================
@@ -127,6 +128,7 @@ func setup_materials():
 	
 	# Land materials (unchanged)
 	materials[TerrainType.BEACH] = create_land_material(Color(0.9, 0.8, 0.6))
+	materials[TerrainType.SPAWN_PLAZA] = create_plaza_material()
 	materials[TerrainType.LEVEL0_GRASS] = create_land_material(Color(0.3, 0.6, 0.2))
 	materials[TerrainType.LEVEL0_DIRT] = create_land_material(Color(0.6, 0.4, 0.2))
 	materials[TerrainType.LEVEL1_GRASS] = create_land_material(Color(0.4, 0.7, 0.3))
@@ -191,6 +193,22 @@ func create_land_material(color: Color) -> StandardMaterial3D:
 	material.roughness = 0.8
 	material.emission_enabled = true
 	material.emission = color * 0.05
+	return material
+	
+func create_plaza_material() -> StandardMaterial3D:
+	"""Create brick-like material for spawn plaza"""
+	var material = StandardMaterial3D.new()
+	material.albedo_color = Color(0.7, 0.6, 0.5)  # Brick-ish gray-tan color
+	material.metallic = 0.1  # Slight metallic for constructed look
+	material.roughness = 0.6  # Smoother than dirt, rougher than metal
+	material.emission_enabled = true
+	material.emission = Color(0.7, 0.6, 0.5) * 0.08  # Slight warm glow
+	
+	# Add some subtle brick-like properties
+	material.clearcoat_enabled = true
+	material.clearcoat = 0.2
+	material.clearcoat_roughness = 0.8
+	
 	return material
 
 # ============================================================================
@@ -258,6 +276,8 @@ func get_land_level_height(terrain_type: int) -> float:
 	"""RESTORED: Get height for land terrain based on level"""
 	match terrain_type:
 		TerrainType.BEACH:
+			return 0.0 * height_scale
+		TerrainType.SPAWN_PLAZA:  # <-- ADD THIS
 			return 0.0 * height_scale
 		TerrainType.LEVEL0_GRASS, TerrainType.LEVEL0_DIRT:
 			return 0.0 * height_scale
@@ -421,7 +441,7 @@ func find_nearest_land_level(tile_pos: Vector2i, terrain_data: Array) -> float:
 func get_terrain_level_from_type(terrain_type: int) -> int:
 	"""RESTORED: Get numeric level (0,1,2,3) from terrain type"""
 	match terrain_type:
-		TerrainType.BEACH, TerrainType.LEVEL0_GRASS, TerrainType.LEVEL0_DIRT:
+		TerrainType.BEACH, TerrainType.SPAWN_PLAZA, TerrainType.LEVEL0_GRASS, TerrainType.LEVEL0_DIRT:  # <-- ADD SPAWN_PLAZA HERE
 			return 0
 		TerrainType.LEVEL1_GRASS, TerrainType.LEVEL1_DIRT:
 			return 1
@@ -1699,3 +1719,85 @@ func get_island_dimensions() -> Dictionary:
 		"tile_size": tile_size,
 		"center_position": get_island_center_position()
 	}
+
+# Add this function to your Island3DRenderer
+func get_spawn_plaza_position() -> Vector3:
+	"""Get the world position of the spawn plaza center with proper ground height"""
+	print("\n=== CALCULATING SPAWN PLAZA POSITION ===")
+	
+	if not current_island_data:
+		print("ERROR: No island data available for spawn plaza calculation")
+		print("Falling back to island center")
+		return get_island_center_position()
+	
+	print("Island data found:")
+	print("- Width:", current_island_data.island_width)
+	print("- Height:", current_island_data.island_height)
+	print("- Has spawn plaza center:", current_island_data.spawn_plaza_center != Vector2i(-1, -1))
+	
+	# Check if we have a spawn plaza center
+	if current_island_data.spawn_plaza_center == Vector2i(-1, -1):
+		print("WARNING: No spawn plaza center stored - looking for plaza tiles...")
+		var plaza_center = find_spawn_plaza_tiles()
+		if plaza_center == Vector2i(-1, -1):
+			print("ERROR: No spawn plaza found! Falling back to island center")
+			return get_island_center_position()
+		current_island_data.spawn_plaza_center = plaza_center
+	
+	var plaza_center = current_island_data.spawn_plaza_center
+	print("- Plaza center tile:", plaza_center)
+	
+	# Check bounds
+	if plaza_center.y >= current_island_data.terrain_data.size() or plaza_center.x >= current_island_data.terrain_data[plaza_center.y].size():
+		print("ERROR: Plaza center tile out of bounds!")
+		return get_island_center_position()
+	
+	# Get terrain type at plaza center
+	var terrain_type = current_island_data.terrain_data[plaza_center.y][plaza_center.x]
+	print("- Terrain type at plaza center:", terrain_type)
+	
+	# Calculate world position with proper height
+	var world_x = plaza_center.x * tile_size
+	var world_z = plaza_center.y * tile_size
+	var world_y = get_terrain_level_height(terrain_type, plaza_center)
+	
+	print("- World position calculation:")
+	print("  - world_x:", world_x, "(tile", plaza_center.x, "* size", tile_size, ")")
+	print("  - world_z:", world_z, "(tile", plaza_center.y, "* size", tile_size, ")")
+	print("  - world_y:", world_y)
+	
+	var spawn_pos = Vector3(world_x, world_y + 0.5, world_z)
+	
+	print("- Final spawn plaza position:", spawn_pos)
+	print("===========================================\n")
+	return spawn_pos
+
+func find_spawn_plaza_tiles() -> Vector2i:
+	"""Find spawn plaza tiles if not stored"""
+	if not current_island_data:
+		return Vector2i(-1, -1)
+	
+	print("Searching for spawn plaza tiles...")
+	var plaza_tiles = []
+	
+	for y in range(current_island_data.island_height):
+		for x in range(current_island_data.island_width):
+			if y < current_island_data.terrain_data.size() and x < current_island_data.terrain_data[y].size():
+				var terrain_type = current_island_data.terrain_data[y][x]
+				if terrain_type == TerrainType.SPAWN_PLAZA:
+					plaza_tiles.append(Vector2i(x, y))
+	
+	if plaza_tiles.size() == 0:
+		print("No spawn plaza tiles found!")
+		return Vector2i(-1, -1)
+	
+	# Calculate center of found plaza tiles
+	var sum_x = 0
+	var sum_y = 0
+	for tile in plaza_tiles:
+		sum_x += tile.x
+		sum_y += tile.y
+	
+	var center = Vector2i(sum_x / plaza_tiles.size(), sum_y / plaza_tiles.size())
+	print("Found ", plaza_tiles.size(), " plaza tiles, calculated center:", center)
+	return center

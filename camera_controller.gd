@@ -69,16 +69,16 @@ func find_and_setup_player():
 		print("CAMERA: IslandDataStore has data:", IslandDataStore.has_island_data())
 		
 		if island_renderer.has_island_rendered():
-			print("CAMERA: Getting island center position...")
-			var center_pos = island_renderer.get_island_center_position()
-			print("CAMERA: Calculated center position:", center_pos)
+			print("CAMERA: Getting spawn plaza position...")
+			var spawn_pos = island_renderer.get_spawn_plaza_position()  # <-- CHANGED THIS LINE
+			print("CAMERA: Calculated spawn position:", spawn_pos)
 			
 			# Make sure we got a valid position
-			if center_pos != Vector3.ZERO:
-				player.global_position = center_pos
-				print("CAMERA: Player moved to island center:", player.global_position)
+			if spawn_pos != Vector3.ZERO:
+				player.global_position = spawn_pos
+				print("CAMERA: Player moved to spawn plaza:", player.global_position)
 			else:
-				print("CAMERA: Center position was zero, using fallback")
+				print("CAMERA: Spawn position was zero, using fallback")
 				player.global_position = Vector3(50, 2, 50)  # Fallback position
 		else:
 			print("CAMERA: Island not rendered yet, trying again in 1 second...")

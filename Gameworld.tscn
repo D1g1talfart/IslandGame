@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3 uid="uid://y12d1dx0txhh"]
+[gd_scene load_steps=47 format=3 uid="uid://y12d1dx0txhh"]
 
 [ext_resource type="Script" uid="uid://dwxqg2p1f6hb" path="res://view_manager.gd" id="1_pd1xp"]
 [ext_resource type="Texture2D" uid="uid://b35c6bsenv4wj" path="res://Art/Deep Salt Water.png" id="5_81k2m"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://du4qtpens0hb1" path="res://Art/Dirt.png" id="8_x8wmw"]
 [ext_resource type="Texture2D" uid="uid://cudunmdfwhila" path="res://Art/Sand.png" id="9_tadj4"]
 [ext_resource type="Texture2D" uid="uid://coc3qdxl53x30" path="res://Art/River1.png" id="10_pd1xp"]
+[ext_resource type="Texture2D" uid="uid://cmjj6txpspovi" path="res://Art/Plaza.png" id="10_x8wmw"]
 [ext_resource type="Texture2D" uid="uid://cnmchqt0rcawg" path="res://Art/River2.png" id="11_jp1fx"]
 [ext_resource type="Texture2D" uid="uid://clvvsh3k0n5yn" path="res://Art/River3.png" id="12_tyf4s"]
 [ext_resource type="Texture2D" uid="uid://bv6rqy2en03sn" path="res://Art/Shallow Fresh Water.png" id="13_rk28s"]
@@ -66,6 +67,11 @@ texture_region_size = Vector2i(32, 32)
 1:0/0 = 0
 0:1/0 = 0
 1:1/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tadj4"]
+texture = ExtResource("10_x8wmw")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_m1ngu"]
 texture = ExtResource("10_pd1xp")
@@ -191,6 +197,7 @@ sources/30 = SubResource("TileSetAtlasSource_f6w76")
 sources/31 = SubResource("TileSetAtlasSource_2xuep")
 sources/40 = SubResource("TileSetAtlasSource_ws3o1")
 sources/41 = SubResource("TileSetAtlasSource_e4j4n")
+sources/13 = SubResource("TileSetAtlasSource_tadj4")
 
 [node name="Gameworld" type="Node3D"]
 script = ExtResource("1_pd1xp")

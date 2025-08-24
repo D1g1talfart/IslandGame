@@ -223,12 +223,6 @@ func _input(event):
 	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and event.keycode == KEY_E):
 		try_gather_resource()
 		
-	if event is InputEventKey and event.pressed and event.keycode == KEY_F:
-		debug_resource_collection()
-	
-	# Press T to see what resources the terrain manager thinks are nearby
-	if event is InputEventKey and event.pressed and event.keycode == KEY_T:
-		debug_terrain_resources()
 		
 	if event is InputEventKey and event.pressed and event.keycode == KEY_Y:
 		if terrain_manager:
@@ -243,47 +237,6 @@ func _input(event):
 	if event is InputEventKey and event.pressed and event.keycode == KEY_G:
 		debug_inventory_system()
 
-func debug_resource_collection():
-	"""Debug what resources are nearby and why collection might fail"""
-	print("\n=== RESOURCE COLLECTION DEBUG ===")
-	print("Player position: ", global_position)
-	
-	if not terrain_manager:
-		print("ERROR: No terrain manager!")
-		return
-	
-	# Check resources in increasing ranges
-	var ranges = [1.0, 2.0, 3.0, 5.0, 10.0]
-	for range_val in ranges:
-		var nearby = terrain_manager.get_resources_near_position(global_position, range_val)
-		print("Range ", range_val, "m: ", nearby.size(), " resources")
-		
-		for resource in nearby:
-			var distance = global_position.distance_to(resource.world_pos)
-			print("  - ", resource.type, " at ", resource.world_pos, " (", "%.2f" % distance, "m away)")
-	
-	# Check what the visual spawner thinks
-	var resource_spawner = get_node_or_null("../ResourceSpawner")
-	if resource_spawner:
-		var visual_nearby = resource_spawner.get_resources_near_position(global_position, 5.0)
-		print("Visual resources in 5m: ", visual_nearby.size())
-		for visual in visual_nearby:
-			var distance = global_position.distance_to(visual.world_pos)
-			print("  - Visual ", visual.type, " at ", visual.world_pos, " (", "%.2f" % distance, "m away)")
-
-func debug_terrain_resources():
-	"""Debug terrain manager resource data"""
-	if not terrain_manager:
-		return
-	
-	print("\n=== TERRAIN MANAGER RESOURCE DATA ===")
-	print("Total spawned resources: ", terrain_manager.spawned_resources.size())
-	
-	# Show first few resources
-	for i in range(min(5, terrain_manager.spawned_resources.size())):
-		var res = terrain_manager.spawned_resources[i]
-		var distance = global_position.distance_to(res.world_pos)
-		print(i, ": ", res.type, " at ", res.world_pos, " (", "%.2f" % distance, "m away)")
 		
 func debug_inventory_system():
 	"""Debug the new inventory system"""

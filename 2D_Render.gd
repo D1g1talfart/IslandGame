@@ -18,6 +18,7 @@ class_name Island2DDisplay
 
 @export_group("Land Tile IDs")
 @export var beach_id: int = 12
+@export var spawn_plaza_id: int = 13
 @export var level0_grass_id: int = 10
 @export var level0_dirt_id: int = 11
 @export var level1_grass_id: int = 20
@@ -53,7 +54,8 @@ enum TerrainType {
 	LEVEL2_GRASS,
 	LEVEL2_DIRT,
 	LEVEL3_GRASS,
-	LEVEL3_DIRT
+	LEVEL3_DIRT,
+	SPAWN_PLAZA
 }
 
 # ============================================================================
@@ -159,6 +161,7 @@ func get_tile_id_for_terrain_type(terrain_type: int) -> int:
 		TerrainType.RIVER_3: return river_3_id
 		TerrainType.RIVER_MOUTH: return river_mouth_id
 		TerrainType.BEACH: return beach_id
+		TerrainType.SPAWN_PLAZA: return spawn_plaza_id  # <-- ADD THIS LINE
 		TerrainType.LEVEL0_GRASS: return level0_grass_id
 		TerrainType.LEVEL0_DIRT: return level0_dirt_id
 		TerrainType.LEVEL1_GRASS: return level1_grass_id
