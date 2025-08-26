@@ -196,18 +196,31 @@ func create_land_material(color: Color) -> StandardMaterial3D:
 	return material
 	
 func create_plaza_material() -> StandardMaterial3D:
-	"""Create brick-like material for spawn plaza"""
+	"""Create brick material for spawn plaza with texture"""
 	var material = StandardMaterial3D.new()
-	material.albedo_color = Color(0.7, 0.6, 0.5)  # Brick-ish gray-tan color
+	
+	# Load the brick texture
+	var brick_texture = load("res://Art/128x128MossyBrick.png") as Texture2D
+	if brick_texture:
+		material.albedo_texture = brick_texture
+		material.albedo_color = Color.WHITE  # Use white to show texture colors properly
+	else:
+		# Fallback to solid color if texture fails to load
+		material.albedo_color = Color(0.7, 0.6, 0.5)
+		print("Warning: Could not load brick texture, using solid color")
+	
 	material.metallic = 0.1  # Slight metallic for constructed look
 	material.roughness = 0.6  # Smoother than dirt, rougher than metal
 	material.emission_enabled = true
-	material.emission = Color(0.7, 0.6, 0.5) * 0.08  # Slight warm glow
+	material.emission = Color(0.7, 0.6, 0.5) * 0.05  # Subtle warm glow
 	
 	# Add some subtle brick-like properties
 	material.clearcoat_enabled = true
 	material.clearcoat = 0.2
 	material.clearcoat_roughness = 0.8
+	
+	# Optional: Control texture tiling if you want it to repeat differently
+	material.uv1_scale = Vector3(1.0, 1.0, 1.0)  # Adjust these values to change tiling
 	
 	return material
 

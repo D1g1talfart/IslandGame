@@ -16,7 +16,7 @@ signal resource_collected(resource_type: String, world_pos: Vector3)
 @export_group("Visual Settings")
 @export var resource_scale: float = 1.0
 @export var add_collision: bool = true
-@export var show_debug_names: bool = true
+@export var show_debug_names: bool = false
 
 # ============================================================================
 # CORE DATA
@@ -593,7 +593,6 @@ func center_glb_model(model_instance: Node3D, resource_type: String):
 			model_instance.position = Vector3(-9, 0, 0)
 			# Make it 50% bigger
 			model_instance.scale = Vector3.ONE * 1.5
-			print("ResourceSpawner: Applied manual offset and 50% scale to berry bush")
 		_:
 			# No offset for other models
 			pass

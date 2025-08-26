@@ -89,6 +89,9 @@ var resource_spawn_rules: Dictionary = {
 		{"type": "ancient_tree", "chance": 0.1, "max_per_tile": 1},
 		{"type": "crystal_node", "chance": 0.05, "max_per_tile": 1}
 	],
+	TerrainType.LEVEL3_DIRT: [
+		{"type": "crystal_node", "chance": 0.1, "max_per_tile": 1}
+	],
 	TerrainType.BEACH: [
 		{"type": "driftwood", "chance": 0.3, "max_per_tile": 2},
 		{"type": "seashell", "chance": 0.4, "max_per_tile": 3}
