@@ -97,6 +97,7 @@ var items = {
 		"id": 10,
 		"name": "Axe",
 		"type": "tool",
+		"tool_type": "axe",
 		"description": "For chopping wood",
 		"icon_path": "res://Icons/Axe.png",
 		"stack_size": 1,
@@ -106,16 +107,17 @@ var items = {
 		"tool_power": 2
 	},
 	11: {  # Big Axe
-	"id": 11,
-	"name": "Big Axe",
-	"type": "tool",
-	"description": "Heavy axe for cutting large trees",
-	"icon_path": "res://Icons/Axe.png",  # You'll need this icon
-	"stack_size": 1,
-	"sell_price": 200,
-	"rarity": "uncommon",
-	"durability": 150,  # More durable than regular axe
-	"tool_power": 3
+		"id": 11,
+		"name": "Big Axe",
+		"type": "tool",
+		"tool_type": "axe",
+		"description": "Heavy axe for cutting large trees",
+		"icon_path": "res://Icons/Axe.png",  # You'll need this icon
+		"stack_size": 1,
+		"sell_price": 200,
+		"rarity": "uncommon",
+		"durability": 150,  # More durable than regular axe
+		"tool_power": 3
 	},
 	12: {  # Wood
 		"id": 12,
@@ -127,6 +129,33 @@ var items = {
 		"sell_price": 5,
 		"rarity": "common"
 	},
+	13: {  # Pickaxe
+	"id": 13,
+	"name": "Pickaxe",
+	"type": "tool",
+	"tool_type": "pickaxe",
+	"description": "For mining stone and ore",
+	"icon_path": "res://Icons/Pickaxe.png",
+	"stack_size": 1,
+	"sell_price": 100,
+	"rarity": "common",
+	"durability": 80,
+	"tool_power": 2
+},
+
+14: {  # Mining Hammer
+	"id": 14,
+	"name": "Mining Hammer",
+	"type": "tool", 
+	"tool_type": "pickaxe",
+	"description": "Heavy tool for mining crystals and hard stone",
+	"icon_path": "res://Icons/MiningHammer.png",
+	"stack_size": 1,
+	"sell_price": 250,
+	"rarity": "rare",
+	"durability": 120,
+	"tool_power": 3
+},
 }
 
 # Rest of your ItemDatabase code stays the same...

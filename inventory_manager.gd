@@ -77,6 +77,9 @@ class InventoryItem:
 	func is_tool() -> bool:
 		return get_type() == "tool"
 		
+	func get_tool_type() -> String:
+		return _cached_data.get("tool_type", "")
+		
 	# Add this method to your InventoryItem class in inventory_manager.gd
 
 	func duplicate_with_count(new_count: int) -> InventoryItem:
@@ -98,6 +101,8 @@ func _ready():
 	add_item_by_id(2, 5)   # 5 Stone  
 	add_item_by_id(10, 1)  # 1 Axe
 	add_item_by_id(11,1)
+	add_item_by_id(13, 1)  # 1 Pickaxe (power 2) - NEW!
+	add_item_by_id(14, 1) 
 	
 	select_hotbar_slot(0)
 	
@@ -232,7 +237,8 @@ func has_tool_equipped(tool_type: String = "") -> bool:
 	
 	# If specific tool type requested, check it
 	if tool_type != "":
-		return equipped.get_name().to_lower().contains(tool_type.to_lower())
+		var equipped_tool_type = equipped.get_tool_type()
+		return equipped_tool_type == tool_type.to_lower()
 	
 	return true
 

@@ -432,7 +432,7 @@ var resource_drop_tables: Dictionary = {
 		{"item_id": 1, "min": 3, "max": 5, "chance": 1.0}  # Wood
 	],
 	"ancient_tree": [
-		{"item_id": 12, "min": 4, "max": 8, "chance": 1.0},  # Wood
+		{"item_id": 12, "min": 4, "max": 8, "chance": 1.0},  # Hard Wood
 		{"item_id": 6, "min": 1, "max": 1, "chance": 0.1}   # Rare Seed (add to database)
 	],
 	"stone_small": [
@@ -486,15 +486,18 @@ func get_resource_drops(resource_type: String) -> Array:
 
 # Define which resources require tools
 # UPDATED: Tool requirements now include power levels
+# UPDATED: Tool requirements now include both axes and pickaxes
 var tool_requirements: Dictionary = {
+	# Tree resources (require axes)
 	"small_tree": {"tool_type": "axe", "power_required": 1},
 	"oak_tree": {"tool_type": "axe", "power_required": 2}, 
 	"pine_tree": {"tool_type": "axe", "power_required": 2},
 	"ancient_tree": {"tool_type": "axe", "power_required": 3},
-	"driftwood": {"tool_type": "axe", "power_required": 1}
-	# Future: Stone resources might need pickaxe
-	# "stone_small": {"tool_type": "pickaxe", "power_required": 1},
-	# "stone_medium": {"tool_type": "pickaxe", "power_required": 2}
+	
+	# Stone/Mining resources (require pickaxes)
+	"stone_small": {"tool_type": "pickaxe", "power_required": 1},
+	"stone_medium": {"tool_type": "pickaxe", "power_required": 2},
+	"crystal_node": {"tool_type": "pickaxe", "power_required": 3}
 }
 
 func collect_resource(resource_data: Dictionary) -> Array:
@@ -542,15 +545,32 @@ func collect_resource(resource_data: Dictionary) -> Array:
 			
 			if player and player.has_method("show_tool_message"):
 				var message = ""
-				match required_power:
-					1:
-						message = "Need basic axe!"
-					2:
-						message = "Need stronger axe!"
-					3:
-						message = "Need Big Axe for ancient trees!"
-					_:
-						message = "Tool not strong enough!"
+				
+				# Different messages based on tool type and power needed
+				if required_tool_type == "axe":
+					match required_power:
+						1:
+							message = "Need basic axe!"
+						2:
+							message = "Need stronger axe!"
+						3:
+							message = "Need Big Axe for ancient trees!"
+						_:
+							message = "Axe not strong enough!"
+				
+				elif required_tool_type == "pickaxe":
+					match required_power:
+						1:
+							message = "Need basic pickaxe!"
+						2:
+							message = "Need stronger pickaxe!"
+						3:
+							message = "Need Mining Hammer for crystals!"
+						_:
+							message = "Pickaxe not strong enough!"
+				
+				else:
+					message = "Tool not strong enough!"
 				
 				player.show_tool_message(message, Color.RED)
 			
@@ -572,7 +592,6 @@ func collect_resource(resource_data: Dictionary) -> Array:
 				for drop in drops_preview:
 					var item_name = ItemDatabase.get_item_name_by_id(drop.item_id)
 					drop_text += "+" + str(drop.amount) + " " + item_name + " "
-				
 				
 	
 	# Tool check passed (or no tool required) - collect the resource
