@@ -5,11 +5,9 @@
 
 [node name="LoadingScreen" type="Control" node_paths=PackedStringArray("progress_bar", "status_label")]
 layout_mode = 3
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_mggpi")
@@ -18,15 +16,9 @@ status_label = NodePath("CenterContainer/VBoxContainer/Status_Label")
 
 [node name="Background" type="ColorRect" parent="."]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -578.0
-offset_top = -329.0
-offset_right = 580.0
-offset_bottom = 329.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.194349, 0.194349, 0.194349, 1)
@@ -38,9 +30,9 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -20.0
+offset_left = -37.5
 offset_top = -40.5
-offset_right = 20.0
+offset_right = 37.5
 offset_bottom = 40.5
 grow_horizontal = 2
 grow_vertical = 2
@@ -54,9 +46,11 @@ text = "Loading..."
 
 [node name="ProgressBar" type="ProgressBar" parent="CenterContainer/VBoxContainer"]
 layout_mode = 2
+size_flags_vertical = 4
 
 [node name="Status_Label" type="Label" parent="CenterContainer/VBoxContainer"]
 layout_mode = 2
+horizontal_alignment = 1
 
 [node name="IslandGenerator" type="Node" parent="."]
 script = ExtResource("2_htrc2")

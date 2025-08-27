@@ -35,25 +35,25 @@ class InventorySlot extends Button:
 		var item = inventory_ui.inventory_manager.items[slot_index]
 		if item == null:
 			return
-		
+	
 		if item.count <= 0:
 			return
-	
+
 		print("Right-click dragging single item: ", item.get_name())
-	
-		# Create single item for dragging using new system
-		var drag_item = InventoryManager.InventoryItem.new(item.item_id, 1)
-	
+
+		# FIXED: Create single item preserving metadata
+		var drag_item = item.duplicate_with_count(1)
+
 		# Create preview with icon
 		var preview = create_drag_preview(item, 1)
-	
+
 		# Create drag data
 		var drag_data = {
 			"item": drag_item,
 			"from_slot": slot_index,
 			"is_single_grab": true
 		}
-	
+
 		# Force start the drag with proper parameters
 		force_drag(drag_data, preview)
 	
@@ -86,22 +86,33 @@ class InventorySlot extends Button:
 	
 	func create_drag_preview(item: InventoryManager.InventoryItem, count: int) -> Control:
 		var preview = Button.new()
-		preview.custom_minimum_size = Vector2(85, 85)  # Match new button size
+		preview.custom_minimum_size = Vector2(85, 85)
 		preview.size = Vector2(85, 85)
 		preview.modulate = Color(1, 1, 1, 0.8)
-	
-		# Set BIGGER icon if available
+
+		# Set icon if available
 		var icon = item.get_icon()
 		if icon:
 			preview.icon = icon
 			preview.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			preview.expand_icon = true  # Make drag preview icon big too!
-			preview.text = str(count)
+			preview.expand_icon = true
+		
+			# Handle tool vs normal item display
+			if item.is_tool():
+				preview.text = item.get_name()
+				# Add durability bar to preview too
+				inventory_ui.add_durability_bar_to_button(preview, item)
+			else:
+				preview.text = str(count)
+		
 			preview.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		else:
 			# Fallback to text
-			preview.text = item.get_name() + "\n" + str(count)
-	
+			if item.is_tool():
+				preview.text = item.get_name()
+			else:
+				preview.text = item.get_name() + "\n" + str(count)
+
 		return preview
 
 class TrashSlot extends Button:
@@ -140,6 +151,10 @@ func _ready():
 	create_full_inventory()
 	inventory_manager.inventory_changed.connect(update_all_displays)
 	inventory_manager.hotbar_changed.connect(highlight_selected_slot)
+	
+	# ADD THIS: Ensure initial selection after everything is connected
+	await get_tree().process_frame
+	highlight_selected_slot(inventory_manager.selected_hotbar_slot)
 
 func show_inventory_ui():
 	"""Call this when the game is actually ready to show inventory"""
@@ -200,8 +215,8 @@ func create_full_inventory():
 	
 	# BIGGER: Even wider panel for larger icons
 	inventory_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	inventory_panel.offset_left = -450   # Even wider (was -400)
-	inventory_panel.offset_right = 450   
+	inventory_panel.offset_left = -470   # Even wider (was -400)
+	inventory_panel.offset_right = 470   
 	inventory_panel.offset_top = -275    # Taller (was -225)
 	inventory_panel.offset_bottom = 275  
 	
@@ -283,8 +298,11 @@ func update_all_displays():
 
 func update_hotbar_display():
 	for i in range(10):
-		var item = inventory_manager.get_hotbar_item(i)
 		var button = hotbar_slots[i]
+		var item = inventory_manager.get_hotbar_item(i)
+		
+		# ALWAYS clean up first, regardless of item state
+		remove_durability_bar_from_button(button)
 		
 		if item != null:
 			# Set icon
@@ -292,18 +310,31 @@ func update_hotbar_display():
 			if icon:
 				button.icon = icon
 				button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				button.expand_icon = true  # Make icon bigger
+				button.expand_icon = true
 				
-				# Show both name AND count for hotbar
+				# Show name and handle tool durability vs normal count
 				var name = item.get_name()
-				if name.length() > 8:  # Shorten long names
+				if name.length() > 8:
 					name = name.substr(0, 6) + ".."
-				button.text = name + "\n" + str(item.count)
+				
+				if item.is_tool():
+					# Tools show name only, durability bar will be added
+					button.text = name
+					# Use call_deferred to avoid timing issues
+					call_deferred("add_durability_bar_to_button", button, item)
+				else:
+					# Normal items show name + count
+					button.text = name + "\n" + str(item.count)
+				
 				button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 			else:
 				# Fallback to text if no icon
 				button.icon = null
-				button.text = item.get_name() + "\n" + str(item.count)
+				if item.is_tool():
+					button.text = item.get_name()
+					call_deferred("add_durability_bar_to_button", button, item)
+				else:
+					button.text = item.get_name() + "\n" + str(item.count)
 		else:
 			button.icon = null
 			button.text = str(i + 1) if i < 9 else "0"
@@ -311,36 +342,57 @@ func update_hotbar_display():
 func update_inventory_display():
 	if not inventory_slots:
 		return
-		
+	
 	for i in range(40):
 		if i < inventory_slots.size():
-			var item = inventory_manager.items[i] if i < inventory_manager.items.size() else null
 			var button = inventory_slots[i]
+			var item = inventory_manager.items[i] if i < inventory_manager.items.size() else null
+			
+			# ALWAYS clean up first
+			remove_durability_bar_from_button(button)
 			
 			if item != null:
-				var count = item.count
-				
-				# Set BIGGER icon
+				# Set icon
 				var icon = item.get_icon()
 				if icon:
 					button.icon = icon
 					button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-					button.expand_icon = true  # BIGGER icons!
+					button.expand_icon = true
 					
-					# For inventory, show count prominently
-					button.text = str(count)
+					if item.is_tool():
+						# Tools show no count text, just durability bar
+						button.text = ""
+						call_deferred("add_durability_bar_to_button", button, item)
+						
+						# Enhanced tooltip for tools with durability
+						var dur = item.get_durability()
+						var max_dur = item.get_max_durability()
+						button.tooltip_text = item.get_name() + "\nDurability: " + str(dur) + "/" + str(max_dur) + "\n" + ItemDatabase.get_item_by_id(item.item_id).get("description", "")
+					else:
+						# Normal items show count
+						button.text = str(item.count)
+						button.tooltip_text = item.get_name() + " (x" + str(item.count) + ")\n" + ItemDatabase.get_item_by_id(item.item_id).get("description", "") + "\n\nLeft-click: drag all\nRight-click: drag one"
+					
 					button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-					
-					# Add name to tooltip
-					button.tooltip_text = item.get_name() + " (x" + str(count) + ")\n" + ItemDatabase.get_item_by_id(item.item_id).get("description", "") + "\n\nLeft-click: drag all\nRight-click: drag one"
 				else:
 					# Fallback to text if no icon
 					button.icon = null
-					var display_name = item.get_name()
-					if display_name.length() > 10:  # More space now
-						display_name = display_name.substr(0, 8) + ".."
-					button.text = display_name + "\n" + str(count)
-					button.tooltip_text = item.get_name() + " (x" + str(count) + ")\nLeft-click: drag all\nRight-click: drag one"
+					if item.is_tool():
+						var display_name = item.get_name()
+						if display_name.length() > 10:
+							display_name = display_name.substr(0, 8) + ".."
+						button.text = display_name
+						call_deferred("add_durability_bar_to_button", button, item)
+						
+						var dur = item.get_durability()
+						var max_dur = item.get_max_durability()
+						button.tooltip_text = item.get_name() + "\nDurability: " + str(dur) + "/" + str(max_dur)
+					else:
+						var display_name = item.get_name()
+						if display_name.length() > 10:
+							display_name = display_name.substr(0, 8) + ".."
+						button.text = display_name + "\n" + str(item.count)
+						button.tooltip_text = item.get_name() + " (x" + str(item.count) + ")\nLeft-click: drag all\nRight-click: drag one"
 				
 				button.disabled = false
 				
@@ -352,7 +404,7 @@ func update_inventory_display():
 						button.modulate = Color.CYAN if i < 10 else Color.LIGHT_BLUE
 					"consumable":
 						button.modulate = Color.GREEN if i < 10 else Color.LIGHT_GREEN
-					"seed":  # NEW!
+					"seed":
 						button.modulate = Color.MAGENTA if i < 10 else Color.PINK
 					_:
 						button.modulate = Color.YELLOW if i < 10 else Color.WHITE
@@ -363,14 +415,77 @@ func update_inventory_display():
 				button.disabled = false
 				button.modulate = Color.YELLOW if i < 10 else Color.GRAY
 
+func remove_durability_bar_from_button(button: Button):
+	"""Remove ALL durability bar elements from a button"""
+	# Remove by name - more reliable
+	var children_to_remove = []
+	
+	for child in button.get_children():
+		if child.name.begins_with("Durability"):
+			children_to_remove.append(child)
+	
+	for child in children_to_remove:
+		child.queue_free()
+	
+	# Also remove any ColorRect children (fallback cleanup)
+	var color_rects = []
+	for child in button.get_children():
+		if child is ColorRect:
+			color_rects.append(child)
+	
+	for rect in color_rects:
+		rect.queue_free()
+
+func add_durability_bar_to_button(button: Button, item: InventoryManager.InventoryItem):
+	"""Add a durability bar to a button"""
+	# ALWAYS remove existing bars first
+	remove_durability_bar_from_button(button)
+	
+	# Wait a frame to ensure cleanup is complete
+	await get_tree().process_frame
+	
+	var current_dur = item.get_durability()
+	var max_dur = item.get_max_durability()
+	
+	if max_dur <= 0:
+		return  # No durability system
+	
+	# Calculate durability percentage
+	var durability_percent = float(current_dur) / float(max_dur)
+	
+	# Create background bar
+	var bg_bar = ColorRect.new()
+	bg_bar.name = "DurabilityBG_" + str(item.item_id)  # Unique name
+	bg_bar.color = Color.BLACK
+	bg_bar.size = Vector2(button.size.x - 10, 6)
+	bg_bar.position = Vector2(5, button.size.y - 10)
+	button.add_child(bg_bar)
+	
+	# Create durability bar
+	var dur_bar = ColorRect.new()
+	dur_bar.name = "DurabilityBar_" + str(item.item_id)  # Unique name
+	dur_bar.size = Vector2((button.size.x - 10) * durability_percent, 6)
+	dur_bar.position = Vector2(5, button.size.y - 10)
+	
+	# Color based on durability percentage
+	if durability_percent > 0.5:
+		dur_bar.color = Color.GREEN
+	elif durability_percent > 0.1:
+		dur_bar.color = Color.YELLOW
+	else:
+		dur_bar.color = Color.RED
+	
+	button.add_child(dur_bar)
+
 func highlight_selected_slot(slot: int):
-	# Reset all buttons
+	# Reset all buttons to their default color (not white!)
 	for button in hotbar_slots:
-		button.modulate = Color.WHITE
+		button.modulate = Color.HONEYDEW  # Use the original color, not WHITE
 	
 	# Highlight selected
 	if slot < hotbar_slots.size():
 		hotbar_slots[slot].modulate = Color.YELLOW
+		print("UI: Highlighted hotbar slot ", slot)  # Debug to confirm it's working
 		
 func _input(event):
 	if not visible:

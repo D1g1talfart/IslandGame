@@ -104,6 +104,18 @@ var items = {
 		"rarity": "common",
 		"durability": 100,
 		"tool_power": 2
+	},
+	11: {  # Big Axe
+	"id": 11,
+	"name": "Big Axe",
+	"type": "tool",
+	"description": "Heavy axe for cutting large trees",
+	"icon_path": "res://Icons/Axe.png",  # You'll need this icon
+	"stack_size": 1,
+	"sell_price": 200,
+	"rarity": "uncommon",
+	"durability": 150,  # More durable than regular axe
+	"tool_power": 3
 	}
 }
 

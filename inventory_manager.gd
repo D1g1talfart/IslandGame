@@ -46,6 +46,44 @@ class InventoryItem:
 	# Add this to your InventoryItem class in inventory_manager.gd
 	func get_icon() -> Texture2D:
 		return ItemDatabase.get_item_icon(item_id)
+		
+	# Add these methods to your InventoryItem class in inventory_manager.gd
+
+	func get_durability() -> int:
+		return metadata.get("durability", get_max_durability())
+
+	func get_max_durability() -> int:
+		return _cached_data.get("durability", 0)
+
+	func has_durability() -> bool:
+		return get_max_durability() > 0
+
+	func use_durability(amount: int = 1) -> bool:
+		"""Use durability and return true if item should be destroyed"""
+		if not has_durability():
+			return false
+	
+		var current_dur = get_durability()
+		var new_dur = max(0, current_dur - amount)
+		metadata["durability"] = new_dur
+	
+		print("Tool durability: ", new_dur, "/", get_max_durability())
+	
+		return new_dur <= 0  # Return true if broken
+
+	func get_tool_power() -> int:
+		return _cached_data.get("tool_power", 0)
+
+	func is_tool() -> bool:
+		return get_type() == "tool"
+		
+	# Add this method to your InventoryItem class in inventory_manager.gd
+
+	func duplicate_with_count(new_count: int) -> InventoryItem:
+		"""Create a duplicate of this item with a different count, preserving metadata"""
+		var new_item = InventoryItem.new(item_id, new_count)
+		new_item.metadata = metadata.duplicate()  # Copy durability and other metadata
+		return new_item
 
 signal inventory_changed
 signal hotbar_changed(slot: int)
@@ -59,6 +97,9 @@ func _ready():
 	add_item_by_id(1, 15)  # 15 Wood
 	add_item_by_id(2, 5)   # 5 Stone  
 	add_item_by_id(10, 1)  # 1 Axe
+	add_item_by_id(11,1)
+	
+	select_hotbar_slot(0)
 	
 # UPDATED: Add item by ID (primary method)
 func add_item_by_id(item_id: int, amount: int = 1) -> bool:
@@ -176,6 +217,44 @@ func select_hotbar_slot(slot: int):
 		selected_hotbar_slot = slot
 		hotbar_changed.emit(slot)
 		print("Selected hotbar slot: ", slot)
+		
+	# Add these methods to your main InventoryManager class
+
+func get_equipped_tool() -> InventoryItem:
+	"""Get the currently equipped tool (selected hotbar item)"""
+	return get_selected_item()
+
+func has_tool_equipped(tool_type: String = "") -> bool:
+	"""Check if player has a tool equipped"""
+	var equipped = get_equipped_tool()
+	if not equipped or not equipped.is_tool():
+		return false
+	
+	# If specific tool type requested, check it
+	if tool_type != "":
+		return equipped.get_name().to_lower().contains(tool_type.to_lower())
+	
+	return true
+
+func use_equipped_tool(durability_cost: int = 1) -> bool:
+	"""Use the equipped tool and handle breaking. Returns false if tool breaks."""
+	var equipped = get_equipped_tool()
+	if not equipped or not equipped.is_tool():
+		return false
+	
+	var should_break = equipped.use_durability(durability_cost)
+	
+	if should_break:
+		print("💥 ", equipped.get_name(), " broke!")
+		# Remove the broken tool
+		items[selected_hotbar_slot] = null
+		inventory_changed.emit()
+		hotbar_changed.emit(selected_hotbar_slot)
+		return false
+	
+	# Tool still works
+	inventory_changed.emit()
+	return true
 
 func _input(event):
 	if event is InputEventKey and event.pressed:

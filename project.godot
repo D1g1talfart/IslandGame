@@ -22,6 +22,9 @@ ItemDatabase="*res://ItemDatabase.gd"
 
 [display]
 
+window/size/viewport_width=1696
+window/size/viewport_height=954
+window/size/mode=2
 window/stretch/mode="canvas_items"
 
 [input]

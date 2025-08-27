@@ -209,7 +209,7 @@ script = ExtResource("26_f6w76")
 script = ExtResource("27_2xuep")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(573, 323)
+position = Vector2(853, 474)
 script = ExtResource("28_h2wsm")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="."]
