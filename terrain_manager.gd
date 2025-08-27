@@ -74,8 +74,8 @@ var movement_costs: Dictionary = {
 
 var resource_spawn_rules: Dictionary = {
 	TerrainType.LEVEL0_GRASS: [
-		{"type": "small_tree", "chance": 0.1, "max_per_tile": 1},
-		{"type": "oak_tree", "chance": 0.3, "max_per_tile": 1},
+		{"type": "small_tree", "chance": 0.05, "max_per_tile": 1},
+		{"type": "oak_tree", "chance": 0.1, "max_per_tile": 1},
 		{"type": "berry_bush", "chance": 0.1, "max_per_tile": 1}
 	],
 	TerrainType.LEVEL1_GRASS: [
@@ -432,7 +432,7 @@ var resource_drop_tables: Dictionary = {
 		{"item_id": 1, "min": 3, "max": 5, "chance": 1.0}  # Wood
 	],
 	"ancient_tree": [
-		{"item_id": 1, "min": 4, "max": 8, "chance": 1.0},  # Wood
+		{"item_id": 12, "min": 4, "max": 8, "chance": 1.0},  # Wood
 		{"item_id": 6, "min": 1, "max": 1, "chance": 0.1}   # Rare Seed (add to database)
 	],
 	"stone_small": [
@@ -498,8 +498,13 @@ var tool_requirements: Dictionary = {
 }
 
 func collect_resource(resource_data: Dictionary) -> Array:
-	"""Collect a resource with tool type AND power requirements"""
+	"""Collect a resource with tool type AND power requirements - WITH VISUAL FEEDBACK"""
 	var drops = []
+	
+	# Find the player for messaging
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		player = get_node_or_null("/root/Main/Player")
 	
 	# Check tool requirements FIRST
 	var requirements = tool_requirements.get(resource_data.type, {})
@@ -512,6 +517,8 @@ func collect_resource(resource_data: Dictionary) -> Array:
 		
 		if not inventory_manager:
 			print("❌ No inventory manager found!")
+			if player and player.has_method("show_tool_message"):
+				player.show_tool_message("❌ System Error!", Color.RED)
 			return []
 		
 		var required_tool_type = requirements.get("tool_type", "")
@@ -520,6 +527,9 @@ func collect_resource(resource_data: Dictionary) -> Array:
 		# Check if required tool type is equipped
 		if not inventory_manager.has_tool_equipped(required_tool_type):
 			print("❌ You need a ", required_tool_type, " to collect ", resource_data.type)
+			if player and player.has_method("show_tool_message"):
+				var message = "Need " + required_tool_type.capitalize() + " to collect!"
+				player.show_tool_message(message, Color.ORANGE)
 			return []
 		
 		# Check tool power
@@ -530,12 +540,19 @@ func collect_resource(resource_data: Dictionary) -> Array:
 			print("❌ Your ", equipped_tool.get_name(), " (power ", tool_power, ") is not strong enough!")
 			print("❌ ", resource_data.type, " requires tool power ", required_power)
 			
-			# Give helpful hints
-			match required_power:
-				2:
-					print("💡 Try finding a better axe for tougher trees")
-				3:
-					print("💡 You need a Big Axe to cut ancient trees!")
+			if player and player.has_method("show_tool_message"):
+				var message = ""
+				match required_power:
+					1:
+						message = "Need basic axe!"
+					2:
+						message = "Need stronger axe!"
+					3:
+						message = "Need Big Axe for ancient trees!"
+					_:
+						message = "Tool not strong enough!"
+				
+				player.show_tool_message(message, Color.RED)
 			
 			return []
 		
@@ -544,9 +561,19 @@ func collect_resource(resource_data: Dictionary) -> Array:
 		
 		if not tool_still_works:
 			print("💔 Your ", equipped_tool.get_name(), " broke while collecting ", resource_data.type)
+			if player and player.has_method("show_tool_message"):
+				player.show_tool_message("💔 " + equipped_tool.get_name() + " broke!", Color.RED)
 			# Still allow collection since tool broke during use
 		else:
 			print("🔧 Used ", equipped_tool.get_name(), " (power ", tool_power, ") to collect ", resource_data.type)
+			if player and player.has_method("show_tool_message"):
+				var drops_preview = get_resource_drops(resource_data.type)
+				var drop_text = ""
+				for drop in drops_preview:
+					var item_name = ItemDatabase.get_item_name_by_id(drop.item_id)
+					drop_text += "+" + str(drop.amount) + " " + item_name + " "
+				
+				
 	
 	# Tool check passed (or no tool required) - collect the resource
 	drops = get_resource_drops(resource_data.type)

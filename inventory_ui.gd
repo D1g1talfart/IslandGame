@@ -14,6 +14,9 @@ var dragging_item: InventoryManager.InventoryItem = null
 var dragging_from_slot: int = -1
 var drag_preview: Control = null
 
+var message_label: Label
+var message_timer: Timer
+
 class InventorySlot extends Button:
 	var slot_index: int
 	var inventory_ui: Node
@@ -149,6 +152,7 @@ func _ready():
 		
 	create_hotbar_ui()
 	create_full_inventory()
+	create_message_system()
 	inventory_manager.inventory_changed.connect(update_all_displays)
 	inventory_manager.hotbar_changed.connect(highlight_selected_slot)
 	
@@ -630,3 +634,68 @@ func handle_single_item_move(from_slot: int, to_slot: int, single_item: Inventor
 	
 	inventory_manager.inventory_changed.emit()
 	print("Single item move complete!")
+
+func create_message_system():
+	"""Create floating message system for tool feedback"""
+	# Create label for messages
+	message_label = Label.new()
+	message_label.name = "ToolMessage"
+	add_child(message_label)
+	
+	# Position in center-top of screen
+	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	message_label.offset_top = 100
+	message_label.offset_left = -200
+	message_label.offset_right = 200
+	message_label.offset_bottom = 150
+	
+	# Style the message
+	message_label.add_theme_font_size_override("font_size", 24)
+	message_label.add_theme_color_override("font_color", Color.WHITE)
+	message_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	message_label.add_theme_constant_override("shadow_offset_x", 2)
+	message_label.add_theme_constant_override("shadow_offset_y", 2)
+	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	message_label.visible = false
+	
+	# Add background
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.7)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	message_label.add_theme_stylebox_override("normal", style)
+	
+	# Create timer for hiding messages
+	message_timer = Timer.new()
+	message_timer.name = "MessageTimer"
+	message_timer.wait_time = 1.0
+	message_timer.one_shot = true
+	message_timer.timeout.connect(hide_tool_message)
+	add_child(message_timer)
+	
+	print("UI Message system created!")
+
+func show_tool_message(message: String, color: Color = Color.WHITE):
+	"""Show a message at the top of the screen"""
+	if not message_label:
+		print("No message label!")
+		return
+		
+	message_label.text = message
+	message_label.add_theme_color_override("font_color", color)
+	message_label.visible = true
+	
+	# Reset timer
+	message_timer.stop()
+	message_timer.start()
+	
+	print("UI: Showing message: ", message)
+
+func hide_tool_message():
+	"""Hide the message"""
+	if message_label:
+		message_label.visible = false
+		print("UI: Hidden message")

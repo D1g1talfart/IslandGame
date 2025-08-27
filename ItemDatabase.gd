@@ -116,7 +116,17 @@ var items = {
 	"rarity": "uncommon",
 	"durability": 150,  # More durable than regular axe
 	"tool_power": 3
-	}
+	},
+	12: {  # Wood
+		"id": 12,
+		"name": "Hard Wood",
+		"type": "resource", 
+		"description": "Better building material from Anceint trees",
+		"icon_path": "res://Icons/Wood.png",
+		"stack_size": 99,
+		"sell_price": 5,
+		"rarity": "common"
+	},
 }
 
 # Rest of your ItemDatabase code stays the same...

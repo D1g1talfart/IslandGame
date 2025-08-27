@@ -13,6 +13,7 @@ var current_terrain_effects: Dictionary = {}
 var last_terrain_type: int = -1
 
 func _ready():
+	add_to_group("player")
 	print("Player spawned at:", global_position)
 	base_speed = speed  # Store original speed
 	
@@ -60,6 +61,15 @@ func create_collection_range_indicator():
 	
 	indicator.position.y = -0.9  # At ground level
 	add_child(indicator)
+	
+func show_tool_message(message: String, color: Color = Color.WHITE):
+	"""Show a tool message via the UI system"""
+	var inventory_ui = $InventoryUI
+	if inventory_ui and inventory_ui.has_method("show_tool_message"):
+		inventory_ui.show_tool_message(message, color)
+		print("Player: Forwarding message to UI: ", message)
+	else:
+		print("Player: No UI system found for message: ", message)
 
 func _physics_process(delta):
 	# Update terrain effects first
