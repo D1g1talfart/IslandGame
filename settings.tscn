@@ -1,0 +1,159 @@
+[gd_scene load_steps=3 format=3 uid="uid://dwjr5wet2mgu4"]
+
+[ext_resource type="Script" uid="uid://cax0cx3jypb7h" path="res://settings.gd" id="1_x2hje"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_x2hje"]
+
+[node name="Settings" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_x2hje")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.886275)
+
+[node name="Header" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.5
+offset_right = 100.5
+offset_bottom = 134.0
+grow_horizontal = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="Header"]
+layout_mode = 2
+text = "SETTINGS"
+horizontal_alignment = 1
+
+[node name="CloseButton" type="Button" parent="Header"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+text = "Back"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -250.0
+offset_right = 250.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+color = Color(0, 1, 1, 0.329412)
+
+[node name="VBoxContainer" type="HBoxContainer" parent="ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+alignment = 1
+
+[node name="VideoSection" type="VBoxContainer" parent="ScrollContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/VideoSection"]
+layout_mode = 2
+text = "VIDEO"
+
+[node name="VBox" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/VideoSection"]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="FullscreenCheck" type="CheckBox" parent="ScrollContainer/VBoxContainer/VideoSection/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "fullscreen"
+alignment = 1
+
+[node name="VsyncCheck" type="CheckBox" parent="ScrollContainer/VBoxContainer/VideoSection/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Vsync"
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/VideoSection/VBox"]
+layout_mode = 2
+text = "Resolution"
+horizontal_alignment = 1
+
+[node name="ResolutionOption" type="OptionButton" parent="ScrollContainer/VBoxContainer/VideoSection/VBox"]
+layout_mode = 2
+
+[node name="ApplyButton" type="Button" parent="ScrollContainer/VBoxContainer/VideoSection/VBox"]
+layout_mode = 2
+text = "Apply Changes"
+
+[node name="AudioSection" type="VBoxContainer" parent="ScrollContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/AudioSection"]
+layout_mode = 2
+text = "Audio"
+
+[node name="VBox" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/AudioSection"]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/AudioSection/VBox"]
+layout_mode = 2
+text = "Master Volume"
+
+[node name="MasterVolume" type="HSlider" parent="ScrollContainer/VBoxContainer/AudioSection/VBox"]
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="ScrollContainer/VBoxContainer/AudioSection/VBox"]
+layout_mode = 2
+text = "SFX Volume"
+
+[node name="SFXVolume" type="HSlider" parent="ScrollContainer/VBoxContainer/AudioSection/VBox"]
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="ScrollContainer/VBoxContainer/AudioSection/VBox"]
+layout_mode = 2
+text = "Music Volume"
+
+[node name="MusicVolume" type="HSlider" parent="ScrollContainer/VBoxContainer/AudioSection/VBox"]
+layout_mode = 2
+
+[node name="GameplaySection" type="VBoxContainer" parent="ScrollContainer/VBoxContainer"]
+material = SubResource("ShaderMaterial_x2hje")
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/GameplaySection"]
+layout_mode = 2
+size_flags_vertical = 1
+text = "Gameplay"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/GameplaySection"]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/GameplaySection/VBoxContainer"]
+layout_mode = 2
+text = "Coming soon!"

@@ -6,8 +6,10 @@ var main_menu_scene = preload("res://Main_Menu.tscn")
 var loading_screen_scene = preload("res://Loading_Screen.tscn")
 var controls_screen_scene = preload("res://ControlsScreen.tscn")
 var game_world_scene = preload("res://GameWorld.tscn")
+var settings_scene = preload("res://settings.tscn")
 var current_screen = null
 var game_world = null
+var settings_instance = null
 
 func _ready():
 	add_to_group("main")
@@ -25,6 +27,7 @@ func show_main_menu():
 	current_screen.play_pressed.connect(_on_play_pressed)
 	current_screen.controls_pressed.connect(_on_controls_pressed)
 	current_screen.quit_pressed.connect(_on_quit_pressed)
+	current_screen.settings_pressed.connect(_on_settings_pressed)
 
 func show_loading_screen():
 	clear_current_screen()
@@ -54,6 +57,11 @@ func clear_current_screen():
 	if current_screen:
 		current_screen.queue_free()
 		current_screen = null
+	
+	# Also clear settings when switching screens
+	if settings_instance:
+		settings_instance.queue_free()
+		settings_instance = null
 
 func clear_game_world():
 	if game_world:
@@ -73,7 +81,22 @@ func create_game_world_now():
 # Add this method for loading screen to call when done
 func loading_complete():
 	show_game()
+	
+func _on_settings_pressed():
+	show_settings()
 
+func show_settings():
+	if settings_instance == null:
+		settings_instance = settings_scene.instantiate()
+		settings_instance.settings_closed.connect(hide_settings)
+		ui_layer.add_child(settings_instance)
+	
+	settings_instance.visible = true
+	settings_instance.z_index = 100  # Make sure it appears on top
+
+func hide_settings():
+	if settings_instance:
+		settings_instance.visible = false
 
 
 # These callback functions were missing!
